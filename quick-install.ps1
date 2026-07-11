@@ -232,7 +232,7 @@ if (-not $pythonCmd) {
         if (Test-Path $pthFile) {
             $pthContent = Get-Content $pthFile
             $pthContent = $pthContent -replace '#import site', 'import site'
-            $pthContent | Set-Content $pthFile
+            [System.IO.File]::WriteAllText($pthFile, ($pthContent -join "`n"), [System.Text.UTF8Encoding]::new($false))
         }
         
         # Install pip
@@ -545,21 +545,13 @@ if (-not $hermesBin) {
     
     # Create batch file for gateway
     $gatewayBat = Join-Path $startupDir "hermes-gateway.bat"
-    $gatewayContent = @"
-@echo off
-set PATH=$NpmGlobal;$env:Path
-"$hermesBin" gateway start
-"@
-    $gatewayContent | Set-Content $gatewayBat -Encoding ASCII
+    $gatewayContent = "@echo off`r`nset PATH=$NpmGlobal;$env:Path`r`n`"$hermesBin`" gateway start"
+    [System.IO.File]::WriteAllText($gatewayBat, $gatewayContent, [System.Text.UTF8Encoding]::new($false))
     
     # Create batch file for dashboard
     $dashboardBat = Join-Path $startupDir "hermes-dashboard.bat"
-    $dashboardContent = @"
-@echo off
-set PATH=$NpmGlobal;$env:Path
-"$hermesBin" dashboard start
-"@
-    $dashboardContent | Set-Content $dashboardBat -Encoding ASCII
+    $dashboardContent = "@echo off`r`nset PATH=$NpmGlobal;$env:Path`r`n`"$hermesBin`" dashboard start"
+    [System.IO.File]::WriteAllText($dashboardBat, $dashboardContent, [System.Text.UTF8Encoding]::new($false))
     
     # Create Windows Task Scheduler tasks
     try {
