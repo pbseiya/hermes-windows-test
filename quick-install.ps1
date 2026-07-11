@@ -713,6 +713,12 @@ $hermesBin = $null
 if ($hermesCmd) {
     $hermesBin = $hermesCmd.Source
 }
+else {
+    $fallbackHermes = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts\hermes.exe'
+    if (Test-Path $fallbackHermes) {
+        $hermesBin = $fallbackHermes
+    }
+}
 
 if (-not $hermesBin) {
     Write-Warn 'hermes executable not found -- Skipping auto-start setup'
@@ -733,7 +739,7 @@ else {
 
     # Create batch file for dashboard
     $dashboardBat = Join-Path $startupDir 'hermes-dashboard.bat'
-    $dashboardContent = "@echo off`r`n`"$hermesBin`" dashboard start"
+    $dashboardContent = "@echo off`r`n`"$hermesBin`" dashboard --no-open"
     [System.IO.File]::WriteAllText($dashboardBat, $dashboardContent)
 
     # Create Windows Task Scheduler tasks
@@ -807,7 +813,7 @@ else {
     Write-Host 'Try one of the following:' -ForegroundColor Yellow
     Write-Host '  1. Open new PowerShell and try again' -ForegroundColor White
     Write-Host '  2. Or use full path:' -ForegroundColor White
-    $hermesUvPath = Join-Path $env:USERPROFILE '.local\bin\hermes.exe'
+    $hermesUvPath = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts\hermes.exe'
     Write-Host ('     & "' + $hermesUvPath + '"') -ForegroundColor White
 }
 
