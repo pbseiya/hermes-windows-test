@@ -21,6 +21,28 @@ function Write-Warn    { param($msg) Write-Host '[!] ' -ForegroundColor Yellow -
 function Write-Err     { param($msg) Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
 function Write-Step    { param($msg) Write-Host ('`n=== {0} ===' -f $msg) -ForegroundColor Magenta }
 
+# --- Python validation (Windows App Execution Alias detection) ---
+function Test-PythonValid {
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $cmd) {
+        $cmd = Get-Command python3 -ErrorAction SilentlyContinue
+    }
+    if (-not $cmd) { return $false }
+    # Windows App Execution Aliases live in WindowsApps -- they are stubs, not real Python
+    if ($cmd.Source -like '*WindowsApps*') { return $false }
+    # Verify it actually runs
+    try {
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $ver = & $cmd.Source --version 2>&1
+        $ErrorActionPreference = $prevEAP
+        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) { return $false }
+        if ("$ver" -like '*was not found*') { return $false }
+        return $true
+    }
+    catch { return $false }
+}
+
 # --- Banner ---
 Write-Host ''
 Write-Host '============================================================' -ForegroundColor Cyan
@@ -234,13 +256,9 @@ else {
 # Refresh PATH again to get previously installed Python
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
 
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-if (-not $pythonCmd) {
-    $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
-}
-
-if (-not $pythonCmd) {
-    Write-Warn 'Python 3 not found -- Installing in user-space...'
+$pythonIsValid = Test-PythonValid
+if (-not $pythonIsValid) {
+    Write-Warn 'Python 3 not found (or Windows Store alias detected) -- Installing in user-space...'
 
     # Download Python embeddable package
     $pythonDir = Join-Path $env:USERPROFILE '.local\python'
@@ -294,14 +312,14 @@ if (-not $pythonCmd) {
     }
 }
 
-# Check Python version
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-if (-not $pythonCmd) {
-    $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
-}
+# Check Python version (using validation function to skip Windows Store aliases)
+$pythonIsValid = Test-PythonValid
 
-if ($pythonCmd) {
+if ($pythonIsValid) {
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     $pythonVer = (python --version 2>&1) -replace 'Python ', ''
+    $ErrorActionPreference = $prevEAP
     $pythonParts = $pythonVer -split '\.'
     $pythonMajor = [int]$pythonParts[0]
     $pythonMinor = [int]$pythonParts[1]
