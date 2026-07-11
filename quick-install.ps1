@@ -490,11 +490,12 @@ if (-not $SkipInstall) {
         }
         
         # Use npm ci for clean install from package-lock.json
+        # Note: use cmd /c to avoid PowerShell converting npm stderr warnings to terminating errors
         Write-Info 'Running npm ci (clean install)...'
-        npm.cmd ci --no-fund --no-audit 2>&1 | Out-Null
+        cmd /c "npm.cmd ci --no-fund --no-audit 2>nul 1>nul"
         if ($LASTEXITCODE -ne 0) {
             Write-Warn 'npm ci failed -- Falling back to npm install...'
-            npm.cmd install --no-fund --no-audit 2>&1 | Out-Null
+            cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
         }
         Write-Ok 'Node.js dependencies installed'
         
