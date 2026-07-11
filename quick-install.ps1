@@ -83,13 +83,23 @@ if ($psVer.Major -lt 5) {
 }
 Write-Ok "PowerShell $psVer"
 
-# 1.2 Internet connection
+# 1.2 Internet connection (with proxy support)
 try {
-    $testConn = Invoke-WebRequest -Uri 'https://hermes-agent.nousresearch.com' -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+    # Detect system proxy
+    $proxy = [System.Net.WebProxy]::GetDefaultProxy()
+    if ($proxy -and $proxy.Address) {
+        Write-Info "System proxy detected: $($proxy.Address)"
+        $global:PSDefaultParameterValues = @{
+            'Invoke-WebRequest:Proxy' = $proxy.Address
+            'Invoke-WebRequest:ProxyUseDefaultCredentials' = $true
+        }
+    }
+
+    $testConn = Invoke-WebRequest -Uri 'https://github.com' -UseBasicParsing -TimeoutSec 15 -ErrorAction Stop
     Write-Ok 'Internet connection OK'
 }
 catch {
-    Write-Err "Cannot connect to hermes-agent.nousresearch.com`nCheck Internet / Firewall / Proxy"
+    Write-Err "Cannot connect to the internet.`nPlease check your Internet / Firewall / Proxy settings.`nIf your company uses a proxy, make sure it's configured in Internet Options."
 }
 
 # 1.3 Git (user-space)
@@ -101,10 +111,10 @@ if (-not $gitCmd) {
     $gitDir = Join-Path $env:USERPROFILE '.local\git'
     if (-not (Test-Path $gitDir)) { New-Item -ItemType Directory -Path $gitDir -Force | Out-Null }
 
-    $gitUrl = 'https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/PortableGit-2.43.0-64-bit.7z.exe'
+    $gitUrl = 'https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/PortableGit-2.47.1.2-64-bit.7z.exe'
     $gitExe = Join-Path $gitDir 'PortableGit.7z.exe'
 
-    Write-Info 'Downloading Git Portable...'
+    Write-Info 'Downloading Git Portable (this may take 1-2 minutes)...'
     try {
         Invoke-WebRequest -Uri $gitUrl -OutFile $gitExe -UseBasicParsing
         Write-Info 'Extracting Git...'
@@ -121,18 +131,13 @@ if (-not $gitCmd) {
             [System.Environment]::SetEnvironmentVariable('Path', ($gitBin + ';' + $gitCmdDir + ';' + $userPath), 'User')
         }
 
+        # Clean up installer
+        Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
+
         Write-Ok 'Git Portable installed'
     }
     catch {
-        Write-Warn 'Git download failed -- Trying winget'
-        try {
-            winget install Git.Git --scope user --accept-source-agreements --accept-package-agreements --silent
-            $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
-            Write-Ok 'Git installed with winget'
-        }
-        catch {
-            Write-Err 'Git installation failed -- Please install manually: https://git-scm.com/download/win'
-        }
+        Write-Err "Git download failed: $_`nPlease check your internet connection and try again."
     }
 }
 else {
@@ -149,79 +154,41 @@ $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
     Write-Warn 'Node.js not found -- Installing in user-space...'
 
-    # Try nvm-windows first
-    $nvmCmd = Get-Command nvm -ErrorAction SilentlyContinue
-    if (-not $nvmCmd) {
-        Write-Info 'Installing nvm-windows...'
-        $nvmDir = Join-Path $env:USERPROFILE '.nvm'
-        if (-not (Test-Path $nvmDir)) { New-Item -ItemType Directory -Path $nvmDir -Force | Out-Null }
+    # Download Node.js portable (no admin required)
+    $nodeDir = Join-Path $env:USERPROFILE '.local\node'
+    if (-not (Test-Path $nodeDir)) { New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null }
 
-        # Download nvm-setup.exe
-        $nvmUrl = 'https://github.com/coreybutler/nvm-windows/releases/download/1.1.12/nvm-setup.exe'
-        $nvmExe = Join-Path $nvmDir 'nvm-setup.exe'
+    $nodeUrl = 'https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip'
+    $nodeZip = Join-Path $nodeDir 'node.zip'
 
-        try {
-            Invoke-WebRequest -Uri $nvmUrl -OutFile $nvmExe -UseBasicParsing
-            Write-Info 'Installing nvm-windows...'
-            Start-Process -FilePath $nvmExe -ArgumentList '/S', ('/D=' + $nvmDir) -Wait -NoNewWindow
+    Write-Info 'Downloading Node.js v22 portable (this may take 2-3 minutes)...'
+    try {
+        Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeZip -UseBasicParsing
+        Write-Info 'Extracting Node.js...'
+        Expand-Archive -Path $nodeZip -DestinationPath $nodeDir -Force
 
-            $env:Path = $nvmDir + ';' + $env:Path
-            $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
-            if ($userPath -notlike "*$nvmDir*") {
-                [System.Environment]::SetEnvironmentVariable('Path', ($nvmDir + ';' + $userPath), 'User')
-            }
+        # Move files from subfolder
+        $nodeSubDir = Get-ChildItem -Path $nodeDir -Directory | Where-Object { $_.Name -like 'node-v*' } | Select-Object -First 1
+        if ($nodeSubDir) {
+            Get-ChildItem -Path $nodeSubDir.FullName | Copy-Item -Destination $nodeDir -Recurse -Force
+            Remove-Item -Path $nodeSubDir.FullName -Recurse -Force
         }
-        catch {
-            Write-Warn 'nvm installation failed -- Downloading Node.js portable instead'
+
+        Remove-Item -Path $nodeZip -Force
+
+        # Remove .ps1 files to avoid PowerShell execution policy issues
+        Get-ChildItem -Path $nodeDir -Filter "*.ps1" -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+
+        $env:Path = $nodeDir + ';' + $env:Path
+        $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+        if ($userPath -notlike "*$nodeDir*") {
+            [System.Environment]::SetEnvironmentVariable('Path', ($nodeDir + ';' + $userPath), 'User')
         }
+
+        Write-Ok 'Node.js v22 portable installed'
     }
-
-    # Install Node.js v22
-    $nvmCmd = Get-Command nvm -ErrorAction SilentlyContinue
-    if ($nvmCmd) {
-        Write-Info 'Installing Node.js v22 with nvm...'
-        nvm install 22.14.0
-        nvm use 22.14.0
-        Write-Ok 'Node.js v22 installed with nvm'
-    }
-    else {
-        # Downloading Node.js portable
-        $nodeDir = Join-Path $env:USERPROFILE '.local\node'
-        if (-not (Test-Path $nodeDir)) { New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null }
-
-        $nodeUrl = 'https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip'
-        $nodeZip = Join-Path $nodeDir 'node.zip'
-
-        Write-Info 'Downloading Node.js portable...'
-        try {
-            Invoke-WebRequest -Uri $nodeUrl -OutFile $nodeZip -UseBasicParsing
-            Write-Info 'Extracting Node.js...'
-            Expand-Archive -Path $nodeZip -DestinationPath $nodeDir -Force
-
-            # Move files from subfolder
-            $nodeSubDir = Get-ChildItem -Path $nodeDir -Directory | Where-Object { $_.Name -like 'node-v*' } | Select-Object -First 1
-            if ($nodeSubDir) {
-                Get-ChildItem -Path $nodeSubDir.FullName | Copy-Item -Destination $nodeDir -Recurse -Force
-                Remove-Item -Path $nodeSubDir.FullName -Recurse -Force
-            }
-
-            Remove-Item -Path $nodeZip -Force
-            
-            # Remove .ps1 files to avoid PowerShell execution policy issues
-            Get-ChildItem -Path $nodeDir -Filter "*.ps1" -Recurse | Remove-Item -Force
-            Write-Info "Removed PowerShell scripts (using .cmd files instead)"
-            
-            $env:Path = $nodeDir + ';' + $env:Path
-            $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
-            if ($userPath -notlike "*$nodeDir*") {
-                [System.Environment]::SetEnvironmentVariable('Path', ($nodeDir + ';' + $userPath), 'User')
-            }
-
-            Write-Ok 'Node.js portable installed'
-        }
-        catch {
-            Write-Err 'Node.js installation failed -- Please install manually: https://nodejs.org/'
-        }
+    catch {
+        Write-Err "Node.js installation failed: $_`nPlease check your internet connection and try again."
     }
 }
 
@@ -300,15 +267,7 @@ if (-not $pythonIsValid) {
         Write-Ok 'Python embeddable installed'
     }
     catch {
-        Write-Warn 'Python download failed -- Trying winget'
-        try {
-            winget install Python.Python.3.11 --scope user --accept-source-agreements --accept-package-agreements --silent
-            $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
-            Write-Ok 'Python installed with winget'
-        }
-        catch {
-            Write-Err 'Python installation failed -- Please install manually: https://python.org/'
-        }
+        Write-Err "Python installation failed: $_`nPlease check your internet connection and try again.`nOr download manually from: https://python.org/downloads/"
     }
 }
 
