@@ -556,7 +556,10 @@ else {
     Write-Warn 'agy not found -- Installing...'
 
     try {
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
         irm https://antigravity.google/cli/install.ps1 | iex
+        $ErrorActionPreference = $prevEAP
         $agyBin = Join-Path $env:LOCALAPPDATA 'agy\bin'
         $env:Path = $agyBin + ';' + $env:Path
 
