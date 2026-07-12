@@ -184,7 +184,11 @@ if (-not $nodeCmd) {
             }
 
             Remove-Item -Path $nodeZip -Force
-
+            
+            # Remove .ps1 files to avoid PowerShell execution policy issues
+            Get-ChildItem -Path $nodeDir -Filter "*.ps1" -Recurse | Remove-Item -Force
+            Write-Info "Removed PowerShell scripts (using .cmd files instead)"
+            
             $env:Path = $nodeDir + ';' + $env:Path
             $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
             if ($userPath -notlike "*$nodeDir*") {
@@ -547,7 +551,7 @@ model:
 providers:
   litellm:
     base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
-    key_env: LITELLM_API_KEY
+    api_key: $LiteLLMKey
     transport: openai_chat
 
 # Dashboard
