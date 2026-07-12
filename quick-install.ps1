@@ -394,7 +394,7 @@ if (-not $SkipInstall) {
             
             # Remove directory with retry (use robocopy for node_modules)
             $retryCount = 0
-            while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 3)) {
+            while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 5)) {
                 try {
                     # Empty node_modules first (robocopy trick for fast deletion)
                     $nm = Join-Path $hermesInstallDir 'node_modules'
@@ -404,15 +404,20 @@ if (-not $SkipInstall) {
                         cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
                         Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
                     }
-                    Remove-Item $hermesInstallDir -Recurse -Force
+                    Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction Stop
                     break
                 }
                 catch {
                     $retryCount++
-                    Start-Sleep -Seconds 2
+                    Start-Sleep -Seconds 3
                 }
             }
-            
+
+            # Verify directory is gone before cloning
+            if (Test-Path $hermesInstallDir) {
+                Write-Err "Cannot remove old hermes directory: $hermesInstallDir`nPlease close any running hermes processes and try again, or remove manually:`n  Remove-Item '$hermesInstallDir' -Recurse -Force"
+            }
+
             git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
         }
     }
@@ -424,7 +429,13 @@ if (-not $SkipInstall) {
         }
         git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
     }
-    
+
+    # Validate clone succeeded
+    $gitDir = Join-Path $hermesInstallDir '.git'
+    if (-not (Test-Path $gitDir)) {
+        Write-Err "Git clone failed -- hermes-agent directory is not a valid repository.`nTry removing it manually: Remove-Item '$hermesInstallDir' -Recurse -Force`nThen run this script again."
+    }
+
     # Create virtual environment and install
     Write-Info 'Setting up Python environment...'
     try {
