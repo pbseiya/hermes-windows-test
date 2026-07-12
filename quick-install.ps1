@@ -310,6 +310,9 @@ if ($pythonCmd) {
 # =============================================================================
 Write-Step "Step 2: Install Hermes Agent (npm - user-space)"
 
+# Refresh PATH from registry to get previously installed hermes
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
 # Set npm prefix to user-space
 npm config set prefix $NpmGlobal
 $env:Path = "$NpmGlobal;$env:Path"
@@ -360,6 +363,9 @@ if (-not $SkipInstall) {
 # Step 2.5: Install Antigravity CLI (agy) — Free, uses Google Account
 # =============================================================================
 Write-Step "Step 2.5: Install Antigravity CLI (agy)"
+
+# Refresh PATH from registry to get previously installed agy
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
 
 Write-Info "Antigravity CLI (agy) uses Gemini free via Google Account"
 Write-Info "Good for fixing/repairing hermes when it has problems"
