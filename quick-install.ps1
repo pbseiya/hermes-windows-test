@@ -583,12 +583,39 @@ Write-Host ''
 
 $TelegramToken = Read-Host 'Paste Telegram Bot Token (or press Enter to skip)'
 
+$TelegramChatId = ''
 if (-not [string]::IsNullOrWhiteSpace($TelegramToken)) {
     if ($TelegramToken -notmatch '^\d+:[A-Za-z0-9_-]+$') {
         Write-Warn 'Invalid token -- Please check again (should be 123456789:ABCdef...)'
     }
     else {
         Write-Ok 'Received Telegram Bot Token'
+
+        # 4.3 Telegram Chat ID
+        Write-Host ''
+        Write-Host '----------------------------------------------------------------' -ForegroundColor Cyan
+        Write-Host 'Find your Telegram Chat ID (so ONLY you can use the bot):' -ForegroundColor Yellow
+        Write-Host '----------------------------------------------------------------' -ForegroundColor Cyan
+        Write-Host ''
+        Write-Host '  1. Open Telegram and search for @userinfobot' -ForegroundColor White
+        Write-Host '  2. Press Start or send /start' -ForegroundColor White
+        Write-Host '  3. It will reply with your Id: (a number like 123456789)' -ForegroundColor Cyan
+        Write-Host ''
+
+        $TelegramChatId = Read-Host 'Paste your Chat ID number (or press Enter to skip)'
+
+        if (-not [string]::IsNullOrWhiteSpace($TelegramChatId)) {
+            if ($TelegramChatId -match '^\d+$') {
+                Write-Ok "Chat ID set: $TelegramChatId -- Only you can use the bot"
+            }
+            else {
+                Write-Warn 'Invalid Chat ID (should be numbers only) -- Skipping'
+                $TelegramChatId = ''
+            }
+        }
+        else {
+            Write-Warn 'Skipping Chat ID -- Bot will not respond until you configure TELEGRAM_ALLOWED_USERS'
+        }
     }
 }
 else {
@@ -631,8 +658,8 @@ LITELLM_API_KEY=$LiteLLMKey
 # Telegram Bot Token
 TELEGRAM_BOT_TOKEN=$TelegramToken
 
-# Telegram Authorization (allow all users -- no need to configure chat IDs)
-TELEGRAM_ALLOW_ALL_USERS=true
+# Telegram Authorization (only your Chat ID can use the bot)
+TELEGRAM_ALLOWED_USERS=$TelegramChatId
 "@
 
 [System.IO.File]::WriteAllText($envFile, $envContent, [System.Text.UTF8Encoding]::new($false))
