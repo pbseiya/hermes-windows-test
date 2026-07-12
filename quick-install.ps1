@@ -9,6 +9,9 @@ param(
     [switch]$Force
 )
 
+# Override execution policy for this process (required for irm | iex)
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
 $ErrorActionPreference = 'Stop'
 
 # --- Helpers ---
@@ -207,12 +210,15 @@ if ($nodeCmd) {
     }
     Write-Ok "Node.js v$nodeVer"
 
-    # 1.5 npm
-    $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+    # 1.5 npm (use .cmd to avoid PowerShell execution policy issues)
+    $npmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
+    if (-not $npmCmd) {
+        $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+    }
     if (-not $npmCmd) {
         Write-Err 'npm not found -- Reinstalling Node.js'
     }
-    $npmVer = npm --version
+    $npmVer = npm.cmd --version
     Write-Ok "npm $npmVer"
 }
 else {
