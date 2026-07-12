@@ -392,6 +392,17 @@ if (-not $SkipInstall) {
     $hermesCmd = Get-Command hermes -ErrorAction SilentlyContinue
     if ($hermesCmd) {
         Write-Ok "hermes installed with uv: $($hermesCmd.Source)"
+        
+        # Fix missing UI components (desktop, dashboard)
+        Write-Info 'Fixing missing UI components for desktop and dashboard...'
+        try {
+            hermes update --force 2>&1 | Out-Null
+            Write-Ok 'UI components updated (desktop, dashboard now available)'
+        }
+        catch {
+            Write-Warn 'Could not update UI components automatically'
+            Write-Host '  Run manually: hermes update --force' -ForegroundColor Yellow
+        }
     }
     else {
         Write-Warn 'hermes not in PATH yet -- Try opening new PowerShell and run script again'
