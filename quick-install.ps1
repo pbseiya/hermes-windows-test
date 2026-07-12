@@ -468,6 +468,19 @@ if (-not $SkipInstall) {
             Write-Warn 'Dashboard web UI build skipped -- will build on first launch'
         }
 
+        # Pre-build desktop (Electron) so hermes desktop launches immediately
+        Write-Info 'Pre-building desktop app (this may take 3-5 minutes)...'
+        Push-Location (Join-Path $hermesInstallDir 'apps\desktop')
+        cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
+        cmd /c "npm.cmd run build 2>nul"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok 'Desktop app built -- hermes desktop will launch immediately'
+        }
+        else {
+            Write-Warn 'Desktop pre-build skipped -- will build on first launch'
+        }
+        Pop-Location
+
         Pop-Location
         
         # Add hermes to PATH
