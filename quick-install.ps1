@@ -392,10 +392,18 @@ if (-not $SkipInstall) {
             Get-Process git -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 2
             
-            # Remove directory with retry
+            # Remove directory with retry (use robocopy for node_modules)
             $retryCount = 0
             while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 3)) {
                 try {
+                    # Empty node_modules first (robocopy trick for fast deletion)
+                    $nm = Join-Path $hermesInstallDir 'node_modules'
+                    if (Test-Path $nm) {
+                        $emptyDir = Join-Path $env:TEMP 'empty_dir_for_rmdir'
+                        if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
+                        cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
+                        Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+                    }
                     Remove-Item $hermesInstallDir -Recurse -Force
                     break
                 }
