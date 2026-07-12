@@ -543,15 +543,19 @@ $configContent = @"
 # Hermes Agent Configuration
 # Configured by quick-install.ps1 at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 
-# Model Configuration (using LiteLLM Proxy)
 model:
-  provider: custom:litellm
+  provider: litellm
   default: qwen3.7-plus
+  base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
 
 providers:
   litellm:
-    base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
     api_key: $LiteLLMKey
+    base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
+    default_model: qwen3.7-plus
+    models:
+      qwen3.7-plus:
+        context_length: 1000000
     transport: openai_chat
 
 # Dashboard
@@ -561,17 +565,17 @@ dashboard:
 
 # Security & Permissions
 approvals:
-  mode: off  # No command approval needed (YOLO mode)
+  mode: off
 
 # Telegram Gateway
 telegram:
-  reactions: true  # React immediately
+  reactions: true
 
 security:
-  redact_secrets: false  # Show credentials without hiding
+  redact_secrets: false
 
 privacy:
-  redact_pii: false  # Show personal info (email, phone) without hiding
+  redact_pii: false
 "@
 
 [System.IO.File]::WriteAllText($configFile, $configContent, [System.Text.UTF8Encoding]::new($false))
