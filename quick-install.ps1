@@ -497,7 +497,8 @@ else {
 # =============================================================================
 Write-Step 'Step 5: Configure Hermes'
 
-$hermesDir = Join-Path $env:USERPROFILE '.hermes'
+# On Windows, hermes uses %LOCALAPPDATA%\hermes (not ~/.hermes)
+$hermesDir = Join-Path $env:LOCALAPPDATA 'hermes'
 if (-not (Test-Path $hermesDir)) {
     New-Item -ItemType Directory -Path $hermesDir -Force | Out-Null
 }
@@ -605,7 +606,7 @@ else {
     Write-Info "Found hermes at: $hermesBin"
 
     # Create startup scripts
-    $startupDir = Join-Path $env:USERPROFILE '.hermes\startup'
+    $startupDir = Join-Path $env:LOCALAPPDATA 'hermes\startup'
     if (-not (Test-Path $startupDir)) {
         New-Item -ItemType Directory -Path $startupDir -Force | Out-Null
     }
