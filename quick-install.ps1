@@ -357,9 +357,9 @@ else {
 }
 
 # =============================================================================
-# Step 2.5: Install Hermes Agent (uv tool install)
+# Step 2.5: Install Hermes Agent (git clone + development install)
 # =============================================================================
-Write-Step 'Step 2.5: Install Hermes Agent (uv tool install)'
+Write-Step 'Step 2.5: Install Hermes Agent (full installation with UI)'
 
 # Refresh PATH
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -376,39 +376,88 @@ if ($hermesCmd -and -not $SkipInstall -and -not $Force) {
 }
 
 if (-not $SkipInstall) {
-    Write-Info 'Installing hermes-agent using uv...'
+    # Use git clone method to get full installation with UI components
+    $hermesInstallDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'
+    
+    Write-Info 'Installing hermes-agent with full UI support...'
     Write-Host ''
-
-    try {
-        uv tool install hermes-agent
-    }
-    catch {
-        Write-Err "Hermes installation failed: $_`nTry running this command manually:`n  uv tool install hermes-agent"
-    }
-
-    # Refresh PATH
-    $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
-
-    $hermesCmd = Get-Command hermes -ErrorAction SilentlyContinue
-    if ($hermesCmd) {
-        Write-Ok "hermes installed with uv: $($hermesCmd.Source)"
-        
-        # Fix missing UI components (desktop, dashboard)
-        Write-Info 'Fixing missing UI components for desktop and dashboard...'
+    
+    # Clone or update repository
+    if (Test-Path $hermesInstallDir) {
+        Write-Info 'Updating existing hermes-agent repository...'
         try {
-            hermes update --force 2>&1 | Out-Null
-            Write-Ok 'UI components updated (desktop, dashboard now available)'
+            Push-Location $hermesInstallDir
+            git pull origin main 2>&1 | Out-Null
+            Pop-Location
+            Write-Ok 'Repository updated'
         }
         catch {
-            Write-Warn 'Could not update UI components automatically'
-            Write-Host '  Run manually: hermes update --force' -ForegroundColor Yellow
+            Write-Warn 'Git pull failed -- Reinstalling...'
+            Remove-Item $hermesInstallDir -Recurse -Force
+            git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
         }
+    }
+    else {
+        Write-Info 'Cloning hermes-agent repository...'
+        $hermesParentDir = Join-Path $env:LOCALAPPDATA 'hermes'
+        if (-not (Test-Path $hermesParentDir)) {
+            New-Item -ItemType Directory -Path $hermesParentDir -Force | Out-Null
+        }
+        git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
+    }
+    
+    # Create virtual environment and install
+    Write-Info 'Setting up Python environment...'
+    try {
+        Push-Location $hermesInstallDir
+        
+        # Create venv if not exists
+        $venvDir = Join-Path $hermesInstallDir 'venv'
+        if (-not (Test-Path $venvDir)) {
+            uv venv venv --python 3.11
+        }
+        
+        # Activate venv
+        $venvScripts = Join-Path $venvDir 'Scripts'
+        $env:Path = $venvScripts + ';' + $env:Path
+        
+        # Install hermes with all extras
+        Write-Info 'Installing hermes-agent with UI components...'
+        uv pip install -e '.[all]' --quiet
+        
+        Pop-Location
+        
+        # Add hermes to PATH
+        $hermesBin = Join-Path $venvScripts 'hermes.exe'
+        if (Test-Path $hermesBin) {
+            $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+            if ($userPath -notlike "*$venvScripts*") {
+                [System.Environment]::SetEnvironmentVariable('Path', ($venvScripts + ';' + $userPath), 'User')
+                $env:Path = $venvScripts + ';' + $env:Path
+            }
+            Write-Ok "hermes installed at: $hermesBin"
+            Write-Ok 'UI components included (desktop, dashboard, TUI)'
+        }
+        else {
+            Write-Warn 'hermes executable not found in venv'
+        }
+    }
+    catch {
+        Write-Err "Hermes installation failed: $_`nTry installing manually:`n  cd $hermesInstallDir`n  uv pip install -e '.[all]'"
+    }
+    
+    # Refresh PATH
+    $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
+    
+    $hermesCmd = Get-Command hermes -ErrorAction SilentlyContinue
+    if ($hermesCmd) {
+        Write-Ok "hermes ready: $($hermesCmd.Source)"
     }
     else {
         Write-Warn 'hermes not in PATH yet -- Try opening new PowerShell and run script again'
         Write-Host ''
-        Write-Host 'Or install manually:' -ForegroundColor Yellow
-        Write-Host '  uv tool install hermes-agent' -ForegroundColor White
+        Write-Host 'Or add to PATH manually:' -ForegroundColor Yellow
+        Write-Host "  $venvScripts" -ForegroundColor White
     }
 }
 
