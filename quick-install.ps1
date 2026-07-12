@@ -823,10 +823,10 @@ Write-Host '                  Installation Complete!                    ' -Foreg
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host ''
 Write-Host 'Installed in user-space (No Admin required):' -ForegroundColor Cyan
-Write-Host '  - Node.js v22+ -> ~/.nvm/ or ~/.local/node/' -ForegroundColor White
+Write-Host '  - Node.js v22+ -> ~/.local/node/' -ForegroundColor White
 Write-Host '  - Python 3.11+ -> ~/.local/python/' -ForegroundColor White
 Write-Host '  - uv -> ~/.local/bin/' -ForegroundColor White
-Write-Host '  - Hermes -> uv tool' -ForegroundColor White
+Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (git clone)' -ForegroundColor White
 Write-Host '  - agy -> ~/AppData/Local/agy/bin/' -ForegroundColor White
 Write-Host ''
 Write-Host 'Configuration:' -ForegroundColor Cyan
