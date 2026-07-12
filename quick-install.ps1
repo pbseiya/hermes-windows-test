@@ -109,6 +109,10 @@ if (-not $gitCmd) {
 }
 
 # 1.4 Node.js v22+ (using nvm-windows or standalone)
+
+# Refresh PATH from registry to get previously installed Node.js
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
 $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 if (-not $nodeCmd) {
     Write-Warn "Node.js not found — Installing in user-space..."
@@ -205,6 +209,10 @@ if ($nodeCmd) {
 }
 
 # 1.6 Python 3.10+ (standalone or embeddable)
+
+# Refresh PATH again to get previously installed Python
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
 $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
 if (-not $pythonCmd) {
     $pythonCmd = Get-Command python3 -ErrorAction SilentlyContinue
