@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # Hermes Agent Quick Install Script (User-Space — No Admin Required)
 # Supports: Windows (PowerShell 5.1+)
 # Usage: .\quick-install.ps1
