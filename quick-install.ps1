@@ -462,21 +462,20 @@ if (-not $SkipInstall) {
         
         # Install Node.js dependencies (required for dashboard, desktop, TUI)
         Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
-        Write-Info 'This may take 3-5 minutes on first run...'
+        Write-Info 'This may take 5-10 minutes on first run...'
         
-        # Clean node_modules if corrupted
+        # Always clean node_modules to avoid corruption
         $nodeModules = Join-Path $hermesInstallDir 'node_modules'
         if (Test-Path $nodeModules) {
-            $packageLock = Join-Path $hermesInstallDir 'package-lock.json'
-            if (-not (Test-Path $packageLock)) {
-                Write-Info 'Cleaning corrupted node_modules...'
-                Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
-            }
+            Write-Info 'Cleaning node_modules...'
+            Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
         }
         
-        npm.cmd install --silent --no-fund --no-audit --progress=false 2>&1 | Out-Null
+        # Use npm ci for clean install from package-lock.json
+        Write-Info 'Running npm ci (clean install)...'
+        npm.cmd ci --no-fund --no-audit 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
-            Write-Warn 'npm install had warnings -- Retrying with verbose...'
+            Write-Warn 'npm ci failed -- Falling back to npm install...'
             npm.cmd install --no-fund --no-audit 2>&1 | Out-Null
         }
         Write-Ok 'Node.js dependencies installed'
