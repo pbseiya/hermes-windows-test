@@ -409,7 +409,25 @@ if (-not $SkipInstall) {
         }
         catch {
             Write-Warn 'Git pull failed -- Reinstalling...'
-            Remove-Item $hermesInstallDir -Recurse -Force
+            Pop-Location  # Make sure we're out of the directory
+            
+            # Kill any git processes that might be holding the directory
+            Get-Process git -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            
+            # Remove directory with retry
+            $retryCount = 0
+            while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 3)) {
+                try {
+                    Remove-Item $hermesInstallDir -Recurse -Force
+                    break
+                }
+                catch {
+                    $retryCount++
+                    Start-Sleep -Seconds 2
+                }
+            }
+            
             git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
         }
     }
