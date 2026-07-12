@@ -376,6 +376,22 @@ if ($hermesCmd -and -not $SkipInstall -and -not $Force) {
 }
 
 if (-not $SkipInstall) {
+    # Remove old uv tool installation if exists (it lacks UI components)
+    $uvToolDir = Join-Path $env:APPDATA 'uv\tools\hermes-agent'
+    if (Test-Path $uvToolDir) {
+        Write-Warn 'Found old hermes installation (uv tool) -- Removing...'
+        Write-Info 'Old installation lacks UI components (desktop, dashboard)'
+        try {
+            uv tool uninstall hermes-agent 2>&1 | Out-Null
+            Write-Ok 'Old hermes removed'
+        }
+        catch {
+            # Force remove if uv tool uninstall fails
+            Remove-Item $uvToolDir -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Ok 'Old hermes removed (forced)'
+        }
+    }
+    
     # Use git clone method to get full installation with UI components
     $hermesInstallDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'
     
