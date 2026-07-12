@@ -457,7 +457,17 @@ if (-not $SkipInstall) {
             cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
         }
         Write-Ok 'Node.js dependencies installed'
-        
+
+        # Build web UI for dashboard (so it works immediately without rebuilding)
+        Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
+        cmd /c "npm.cmd run build -w web 2>nul"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok 'Dashboard web UI built -- ready to use immediately'
+        }
+        else {
+            Write-Warn 'Dashboard web UI build skipped -- will build on first launch'
+        }
+
         Pop-Location
         
         # Add hermes to PATH
@@ -620,6 +630,9 @@ LITELLM_API_KEY=$LiteLLMKey
 
 # Telegram Bot Token
 TELEGRAM_BOT_TOKEN=$TelegramToken
+
+# Telegram Authorization (allow all users -- no need to configure chat IDs)
+TELEGRAM_ALLOW_ALL_USERS=true
 "@
 
 [System.IO.File]::WriteAllText($envFile, $envContent, [System.Text.UTF8Encoding]::new($false))
