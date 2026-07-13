@@ -510,12 +510,20 @@ if (-not $SkipInstall) {
         # Build web UI for dashboard (so it works immediately without rebuilding)
         Write-Info 'Installing web workspace dependencies...'
         $webOk = $false
-        for ($attempt = 1; $attempt -le 3; $attempt++) {
-            cmd /c "npm.cmd install --workspace web --no-fund --no-audit 2>nul 1>nul"
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  Web install attempt $attempt/5..."
+            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
             if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
-            if ($attempt -lt 3) {
-                Write-Warn "  Web install failed (antivirus?) -- Retrying..."
-                Start-Sleep -Seconds 10
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s for antivirus to release files..."
+                Start-Sleep -Seconds $delay
+                # Clean corrupted web node_modules before retry
+                $webNm = Join-Path $hermesInstallDir 'web\node_modules'
+                if (Test-Path $webNm) {
+                    Remove-Item $webNm -Recurse -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 5
+                }
             }
         }
         if ($webOk) {
@@ -529,7 +537,11 @@ if (-not $SkipInstall) {
             }
         }
         else {
-            Write-Warn 'Web workspace install failed -- dashboard will need manual fix'
+            Write-Warn 'Web workspace install failed after 5 attempts'
+            Write-Host '  To fix manually, open a NEW PowerShell and run:' -ForegroundColor Yellow
+            Write-Host '  cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor White
+            Write-Host '  npm install --workspace web --no-fund --no-audit' -ForegroundColor White
+            Write-Host '  npm run build -w web' -ForegroundColor White
         }
 
         # Pre-build desktop (Electron) so hermes desktop launches immediately
@@ -537,13 +549,15 @@ if (-not $SkipInstall) {
         Push-Location (Join-Path $hermesInstallDir 'apps\desktop')
         $desktopNm = Join-Path (Get-Location) 'node_modules'
         $desktopOk = $false
-        for ($attempt = 1; $attempt -le 3; $attempt++) {
-            cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  Desktop build attempt $attempt/5..."
+            cmd /c "npm.cmd install --no-fund --no-audit --prefer-offline 2>nul 1>nul"
             cmd /c "npm.cmd run build 2>nul"
             if ($LASTEXITCODE -eq 0) { $desktopOk = $true; break }
-            if ($attempt -lt 3) {
-                Write-Warn "  Desktop build failed (antivirus?) -- Retrying..."
-                Start-Sleep -Seconds 10
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s for antivirus..."
+                Start-Sleep -Seconds $delay
                 if (Test-Path $desktopNm) { Remove-Item $desktopNm -Recurse -Force -ErrorAction SilentlyContinue }
             }
         }
@@ -966,6 +980,17 @@ else {
     Write-Host '  2. Or use full path:' -ForegroundColor White
     $hermesUvPath = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\venv\Scripts\hermes.exe'
     Write-Host ('     & "' + $hermesUvPath + '"') -ForegroundColor White
+}
+
+# Check dashboard readiness
+$webDist = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent\hermes_cli\web_dist\index.html'
+if (Test-Path $webDist) {
+    Write-Ok 'Dashboard pre-built -- hermes dashboard will work immediately'
+}
+else {
+    Write-Warn 'Dashboard not pre-built -- hermes dashboard will build on first launch (may fail if antivirus blocks npm)'
+    Write-Host '  If it fails, run:' -ForegroundColor Yellow
+    Write-Host '  cd $env:LOCALAPPDATA\hermes\hermes-agent; npm install --workspace web --no-fund --no-audit; npm run build -w web' -ForegroundColor White
 }
 
 # =============================================================================
