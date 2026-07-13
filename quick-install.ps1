@@ -901,17 +901,17 @@ else {
 
     # Create batch file for gateway
     $gatewayBat = Join-Path $startupDir 'hermes-gateway.bat'
-    $gatewayContent = "@echo off`r`n`"$hermesBin`" gateway start"
+    $gatewayContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`n`"$hermesBin`" gateway start"
     [System.IO.File]::WriteAllText($gatewayBat, $gatewayContent)
 
     # Create batch file for dashboard
     $dashboardBat = Join-Path $startupDir 'hermes-dashboard.bat'
-    $dashboardContent = "@echo off`r`n`"$hermesBin`" dashboard --no-open"
+    $dashboardContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`n`"$hermesBin`" dashboard --no-open"
     [System.IO.File]::WriteAllText($dashboardBat, $dashboardContent)
 
     # Create batch file for desktop (with DPAPI workaround for managed computers)
     $desktopBat = Join-Path $startupDir 'hermes-desktop.bat'
-    $desktopContent = "@echo off`r`n`"$hermesBin`" desktop -- --password-store=basic --disable-gpu-sandbox"
+    $desktopContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`n`"$hermesBin`" desktop -- --password-store=basic --disable-gpu-sandbox"
     [System.IO.File]::WriteAllText($desktopBat, $desktopContent)
     Write-Ok 'Desktop launcher created (with DPAPI workaround for managed computers)'
 
@@ -921,17 +921,19 @@ else {
         schtasks /Delete /TN 'HermesGateway' /F 2>$null
         schtasks /Delete /TN 'HermesDashboard' /F 2>$null
 
-        # Create task for gateway (run at logon)
+        # Create task for gateway (run at logon with 30s delay)
         $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument ('/c "' + $gatewayBat + '"')
         $trigger = New-ScheduledTaskTrigger -AtLogOn
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Days 0)
+        $trigger.Delay = 'PT30S'
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Days 0) -StartWhenAvailable
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -RunLevel Limited
 
         Register-ScheduledTask -TaskName 'HermesGateway' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description 'Hermes Agent Telegram Gateway' -Force | Out-Null
 
-        # Create task for dashboard (run at logon)
+        # Create task for dashboard (run at logon with 60s delay)
         $action2 = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument ('/c "' + $dashboardBat + '"')
         $trigger2 = New-ScheduledTaskTrigger -AtLogOn
+        $trigger2.Delay = 'PT60S'
 
         Register-ScheduledTask -TaskName 'HermesDashboard' -Action $action2 -Trigger $trigger2 -Settings $settings -Principal $principal -Description 'Hermes Agent Web Dashboard' -Force | Out-Null
 
@@ -950,14 +952,14 @@ else {
         $wsGateway = New-Object -ComObject WScript.Shell
         $shortcutGateway = $wsGateway.CreateShortcut("$startupFolder\HermesGateway.lnk")
         $shortcutGateway.TargetPath = 'cmd.exe'
-        $shortcutGateway.Arguments = '/c "' + $gatewayBat + '"'
+        $shortcutGateway.Arguments = '/c "set PATH=' + $venvScripts + ';%PATH%" && "' + $gatewayBat + '"'
         $shortcutGateway.WindowStyle = 7  # Minimized
         $shortcutGateway.Save()
 
         # Create shortcut for dashboard
         $shortcutDashboard = $wsGateway.CreateShortcut("$startupFolder\HermesDashboard.lnk")
         $shortcutDashboard.TargetPath = 'cmd.exe'
-        $shortcutDashboard.Arguments = '/c "' + $dashboardBat + '"'
+        $shortcutDashboard.Arguments = '/c "set PATH=' + $venvScripts + ';%PATH%" && "' + $dashboardBat + '"'
         $shortcutDashboard.WindowStyle = 7  # Minimized
         $shortcutDashboard.Save()
 
