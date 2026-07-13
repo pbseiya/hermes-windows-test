@@ -459,24 +459,45 @@ if (-not $SkipInstall) {
         
         # Install Node.js dependencies (required for dashboard, desktop, TUI)
         Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
-        Write-Info 'This may take 5-10 minutes on first run...'
-        
-        # Always clean node_modules to avoid corruption
-        $nodeModules = Join-Path $hermesInstallDir 'node_modules'
-        if (Test-Path $nodeModules) {
-            Write-Info 'Cleaning node_modules...'
-            Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Info 'This may take 5-15 minutes on first run...'
+
+        # Helper: npm install with retry (handles antivirus file locking)
+        function Invoke-NpmWithRetry {
+            param([string]$Command, [int]$MaxRetries = 3)
+            $nodeModules = Join-Path $hermesInstallDir 'node_modules'
+            for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+                Write-Info "  Attempt $attempt of $MaxRetries..."
+                cmd /c "$Command 2>nul 1>nul"
+                if ($LASTEXITCODE -eq 0) { return $true }
+                if ($attempt -lt $MaxRetries) {
+                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in 10 seconds..."
+                    Start-Sleep -Seconds 10
+                    # Clean corrupted node_modules before retry
+                    if (Test-Path $nodeModules) {
+                        Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
+                        Start-Sleep -Seconds 5
+                    }
+                }
+            }
+            return $false
         }
-        
+
         # Use npm ci for clean install from package-lock.json
-        # Note: use cmd /c to avoid PowerShell converting npm stderr warnings to terminating errors
         Write-Info 'Running npm ci (clean install)...'
-        cmd /c "npm.cmd ci --no-fund --no-audit 2>nul 1>nul"
-        if ($LASTEXITCODE -ne 0) {
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit'
+        if (-not $npmOk) {
             Write-Warn 'npm ci failed -- Falling back to npm install...'
-            cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit'
         }
-        Write-Ok 'Node.js dependencies installed'
+        if ($npmOk) {
+            Write-Ok 'Node.js dependencies installed'
+        }
+        else {
+            Write-Warn 'Node.js dependencies install had issues -- dashboard/desktop may need manual fix'
+            Write-Host '  If hermes dashboard/desktop fails, run:' -ForegroundColor Yellow
+            Write-Host '  cd %LOCALAPPDATA%\hermes\hermes-agent' -ForegroundColor White
+            Write-Host '  npm install --no-fund --no-audit' -ForegroundColor White
+        }
 
         # Build web UI for dashboard (so it works immediately without rebuilding)
         Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
@@ -491,9 +512,19 @@ if (-not $SkipInstall) {
         # Pre-build desktop (Electron) so hermes desktop launches immediately
         Write-Info 'Pre-building desktop app (this may take 3-5 minutes)...'
         Push-Location (Join-Path $hermesInstallDir 'apps\desktop')
-        cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
-        cmd /c "npm.cmd run build 2>nul"
-        if ($LASTEXITCODE -eq 0) {
+        $desktopNm = Join-Path (Get-Location) 'node_modules'
+        $desktopOk = $false
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            cmd /c "npm.cmd install --no-fund --no-audit 2>nul 1>nul"
+            cmd /c "npm.cmd run build 2>nul"
+            if ($LASTEXITCODE -eq 0) { $desktopOk = $true; break }
+            if ($attempt -lt 3) {
+                Write-Warn "  Desktop build failed (antivirus?) -- Retrying..."
+                Start-Sleep -Seconds 10
+                if (Test-Path $desktopNm) { Remove-Item $desktopNm -Recurse -Force -ErrorAction SilentlyContinue }
+            }
+        }
+        if ($desktopOk) {
             Write-Ok 'Desktop app built -- hermes desktop will launch immediately'
         }
         else {
@@ -920,8 +951,17 @@ Write-Host '  schtasks /Run /TN "HermesDashboard"' -ForegroundColor Yellow
 Write-Host ''
 Write-Host 'Test functionality:' -ForegroundColor Cyan
 Write-Host ''
-Write-Host '  hermes' -ForegroundColor Yellow
-Write-Host '  > Hello, what can you do' -ForegroundColor White
+Write-Host '  hermes                          Start Hermes CLI (chat)' -ForegroundColor Yellow
+Write-Host '  hermes dashboard                Open web dashboard' -ForegroundColor Yellow
+Write-Host '  hermes desktop                  Open desktop app' -ForegroundColor Yellow
+Write-Host ''
+
+Write-Host 'If dashboard/desktop fails (antivirus issue):' -ForegroundColor Cyan
+Write-Host '  1. Close all hermes processes' -ForegroundColor White
+Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
+Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
+Write-Host '     npm install --no-fund --no-audit' -ForegroundColor Yellow
+Write-Host '  3. Try hermes dashboard / hermes desktop again' -ForegroundColor White
 Write-Host ''
 
 Write-Host ''
