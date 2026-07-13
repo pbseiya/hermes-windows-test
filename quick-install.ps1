@@ -899,9 +899,9 @@ else {
         New-Item -ItemType Directory -Path $startupDir -Force | Out-Null
     }
 
-    # Create batch file for gateway
+    # Create batch file for gateway (direct pythonw call - no interactive prompts)
     $gatewayBat = Join-Path $startupDir 'hermes-gateway.bat'
-    $gatewayContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`n`"$hermesBin`" gateway start"
+    $gatewayContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`nstart /B `"$venvPythonPath`" -m hermes_cli.main gateway run"
     [System.IO.File]::WriteAllText($gatewayBat, $gatewayContent)
 
     # Create batch file for dashboard
