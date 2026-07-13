@@ -518,7 +518,6 @@ if (-not $SkipInstall) {
                 $delay = $attempt * 15
                 Write-Warn "  Failed -- waiting ${delay}s for antivirus to release files..."
                 Start-Sleep -Seconds $delay
-                # Clean corrupted web node_modules before retry
                 $webNm = Join-Path $hermesInstallDir 'web\node_modules'
                 if (Test-Path $webNm) {
                     Remove-Item $webNm -Recurse -Force -ErrorAction SilentlyContinue
@@ -538,10 +537,31 @@ if (-not $SkipInstall) {
         }
         else {
             Write-Warn 'Web workspace install failed after 5 attempts'
-            Write-Host '  To fix manually, open a NEW PowerShell and run:' -ForegroundColor Yellow
-            Write-Host '  cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor White
-            Write-Host '  npm install --workspace web --no-fund --no-audit' -ForegroundColor White
-            Write-Host '  npm run build -w web' -ForegroundColor White
+        }
+
+        # Install TUI workspace (required for embedded terminal in dashboard)
+        Write-Info 'Installing TUI workspace (for embedded terminal)...'
+        $tuiOk = $false
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  TUI install attempt $attempt/5..."
+            cmd /c "npm.cmd install --workspace ui-tui --no-fund --no-audit --prefer-offline 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) { $tuiOk = $true; break }
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s..."
+                Start-Sleep -Seconds $delay
+                $tuiNm = Join-Path $hermesInstallDir 'ui-tui\node_modules'
+                if (Test-Path $tuiNm) {
+                    Remove-Item $tuiNm -Recurse -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 5
+                }
+            }
+        }
+        if ($tuiOk) {
+            Write-Ok 'TUI workspace installed -- dashboard terminal will work'
+        }
+        else {
+            Write-Warn 'TUI workspace install failed -- dashboard chat may not work'
         }
 
         # Pre-build desktop (Electron) so hermes desktop launches immediately
