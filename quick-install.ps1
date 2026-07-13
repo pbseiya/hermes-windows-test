@@ -920,6 +920,29 @@ else {
         Write-Ok '  - HermesGateway.lnk (Telegram)'
         Write-Ok '  - HermesDashboard.lnk (Dashboard)'
     }
+
+    # Fix gateway startup scripts to use venv Python (not embeddable Python)
+    $gatewayServiceDir = Join-Path $env:LOCALAPPDATA 'hermes\gateway-service'
+    if (Test-Path $gatewayServiceDir) {
+        $venvPythonw = Join-Path $venvScripts 'pythonw.exe'
+        $embedPythonw = Join-Path $env:USERPROFILE '.local\python\pythonw.exe'
+        Get-ChildItem $gatewayServiceDir -Filter '*.cmd' | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            if ($content -like "*$embedPythonw*") {
+                $content = $content -replace [regex]::Escape($embedPythonw), $venvPythonw
+                Set-Content $_.FullName $content -NoNewline
+                Write-Ok "Fixed Python path in $($_.Name)"
+            }
+        }
+        Get-ChildItem $gatewayServiceDir -Filter '*.vbs' | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            if ($content -like "*$embedPythonw*") {
+                $content = $content -replace [regex]::Escape($embedPythonw), $venvPythonw
+                Set-Content $_.FullName $content -NoNewline
+                Write-Ok "Fixed Python path in $($_.Name)"
+            }
+        }
+    }
 }
 
 # =============================================================================
