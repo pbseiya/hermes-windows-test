@@ -490,21 +490,32 @@ if (-not $SkipInstall) {
             return $false
         }
 
-        # Use npm ci for clean install from package-lock.json
-        Write-Info 'Running npm ci (clean install)...'
-        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit'
+        # Use npm install with --ignore-scripts to bypass antivirus file locking
+        # Postinstall scripts (electron download, etc.) will be run separately
+        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
         if (-not $npmOk) {
-            Write-Warn 'npm ci failed -- Falling back to npm install...'
-            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit'
+            Write-Warn 'npm install failed -- Falling back to npm ci...'
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
         }
         if ($npmOk) {
             Write-Ok 'Node.js dependencies installed'
         }
         else {
-            Write-Warn 'Node.js dependencies install had issues -- dashboard/desktop may need manual fix'
-            Write-Host '  If hermes dashboard/desktop fails, run:' -ForegroundColor Yellow
-            Write-Host '  cd %LOCALAPPDATA%\hermes\hermes-agent' -ForegroundColor White
-            Write-Host '  npm install --no-fund --no-audit' -ForegroundColor White
+            Write-Warn 'Node.js dependencies install had issues'
+        }
+
+        # Download Electron binary separately (postinstall script)
+        Write-Info 'Downloading Electron binary...'
+        $electronInstall = Join-Path $hermesInstallDir 'node_modules\electron\install.js'
+        if (Test-Path $electronInstall) {
+            cmd /c "node `"$electronInstall`" 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok 'Electron binary downloaded'
+            }
+            else {
+                Write-Warn 'Electron download failed -- desktop may not work'
+            }
         }
 
         # Build web UI for dashboard (so it works immediately without rebuilding)
@@ -512,7 +523,7 @@ if (-not $SkipInstall) {
         $webOk = $false
         for ($attempt = 1; $attempt -le 5; $attempt++) {
             Write-Info "  Web install attempt $attempt/5..."
-            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
+            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
             if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
             if ($attempt -lt 5) {
                 $delay = $attempt * 15
@@ -544,7 +555,7 @@ if (-not $SkipInstall) {
         $tuiOk = $false
         for ($attempt = 1; $attempt -le 5; $attempt++) {
             Write-Info "  TUI install attempt $attempt/5..."
-            cmd /c "npm.cmd install --workspace ui-tui --no-fund --no-audit --prefer-offline 2>nul 1>nul"
+            cmd /c "npm.cmd install --workspace ui-tui --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
             if ($LASTEXITCODE -eq 0) { $tuiOk = $true; break }
             if ($attempt -lt 5) {
                 $delay = $attempt * 15
@@ -571,7 +582,7 @@ if (-not $SkipInstall) {
         $desktopOk = $false
         for ($attempt = 1; $attempt -le 5; $attempt++) {
             Write-Info "  Desktop build attempt $attempt/5..."
-            cmd /c "npm.cmd install --no-fund --no-audit --prefer-offline 2>nul 1>nul"
+            cmd /c "npm.cmd install --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
             cmd /c "npm.cmd run build 2>nul"
             if ($LASTEXITCODE -eq 0) { $desktopOk = $true; break }
             if ($attempt -lt 5) {
