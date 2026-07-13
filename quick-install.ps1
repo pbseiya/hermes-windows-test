@@ -456,10 +456,18 @@ if (-not $SkipInstall) {
         Write-Info 'Installing hermes-agent Python packages...'
         uv pip install -e '.[all]' --quiet
         Write-Ok 'Python packages installed'
-        
+
+        # Configure npm for corporate environments (antivirus-friendly)
+        Write-Info 'Configuring npm for corporate environment...'
+        cmd /c "npm.cmd config set maxsockets 3 2>nul"
+        cmd /c "npm.cmd config set fetch-retries 5 2>nul"
+        cmd /c "npm.cmd config set fetch-timeout 300000 2>nul"
+        cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
+        cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
+
         # Install Node.js dependencies (required for dashboard, desktop, TUI)
         Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
-        Write-Info 'This may take 5-15 minutes on first run...'
+        Write-Info 'This may take 10-20 minutes on first run...'
 
         # Helper: npm install with retry (handles antivirus file locking)
         function Invoke-NpmWithRetry {
@@ -562,6 +570,17 @@ if (-not $SkipInstall) {
         }
         else {
             Write-Warn 'hermes executable not found in venv'
+        }
+
+        # Remove embeddable Python from PATH (gateway must use venv Python, not embeddable)
+        $currentUserPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+        $pathParts = $currentUserPath -split ';' | Where-Object {
+            $_ -ne '' -and $_ -notlike '*\.local\python*'
+        }
+        $cleanPath = $pathParts -join ';'
+        if ($cleanPath -ne $currentUserPath) {
+            [System.Environment]::SetEnvironmentVariable('Path', $cleanPath, 'User')
+            Write-Ok 'Removed embeddable Python from PATH (gateway will use venv Python)'
         }
     }
     catch {
