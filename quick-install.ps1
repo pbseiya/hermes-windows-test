@@ -449,6 +449,7 @@ if (-not $SkipInstall) {
         
         # Activate venv
         $venvScripts = Join-Path $venvDir 'Scripts'
+        $venvPythonPath = Join-Path $venvScripts 'python.exe'
         $env:Path = $venvScripts + ';' + $env:Path
         
         # Install hermes with all extras (Python)
@@ -695,6 +696,9 @@ TELEGRAM_BOT_TOKEN=$TelegramToken
 
 # Telegram Authorization (only your Chat ID can use the bot)
 TELEGRAM_ALLOWED_USERS=$TelegramChatId
+
+# Force gateway to use venv Python (not embeddable/system Python)
+HERMES_PYTHON=$venvPythonPath
 "@
 
 [System.IO.File]::WriteAllText($envFile, $envContent, [System.Text.UTF8Encoding]::new($false))
@@ -794,6 +798,12 @@ else {
     $dashboardBat = Join-Path $startupDir 'hermes-dashboard.bat'
     $dashboardContent = "@echo off`r`n`"$hermesBin`" dashboard --no-open"
     [System.IO.File]::WriteAllText($dashboardBat, $dashboardContent)
+
+    # Create batch file for desktop (with DPAPI workaround for managed computers)
+    $desktopBat = Join-Path $startupDir 'hermes-desktop.bat'
+    $desktopContent = "@echo off`r`n`"$hermesBin`" desktop -- --password-store=basic --disable-gpu-sandbox"
+    [System.IO.File]::WriteAllText($desktopBat, $desktopContent)
+    Write-Ok 'Desktop launcher created (with DPAPI workaround for managed computers)'
 
     # Create Windows Task Scheduler tasks
     try {
