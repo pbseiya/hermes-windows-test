@@ -1021,12 +1021,10 @@ if (Test-Path $webDist) {
     Write-Ok 'Dashboard pre-built -- hermes dashboard will work immediately'
 }
 else {
-    Write-Warn 'Dashboard not pre-built -- hermes dashboard will build on first launch (may fail if antivirus blocks npm)'
-    Write-Host '  If it fails, run:' -ForegroundColor Yellow
+    Write-Warn 'Dashboard not pre-built'
+    Write-Host '  To fix, run these commands (temporarily disable antivirus if blocked):' -ForegroundColor Yellow
     Write-Host '  cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor White
-    Write-Host '  npm install --no-fund --no-audit --ignore-scripts' -ForegroundColor White
-    Write-Host '  node node_modules\electron\install.js' -ForegroundColor White
-    Write-Host '  npm install --workspace web --no-fund --no-audit --ignore-scripts' -ForegroundColor White
+    Write-Host '  npm install --workspace web --no-fund --no-audit' -ForegroundColor White
     Write-Host '  npm run build -w web' -ForegroundColor White
 }
 
@@ -1076,14 +1074,14 @@ Write-Host '  hermes desktop                  Open desktop app' -ForegroundColor
 Write-Host ''
 
 Write-Host 'If dashboard/desktop fails (antivirus issue):' -ForegroundColor Cyan
-Write-Host '  1. Close all hermes processes' -ForegroundColor White
+Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
 Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
 Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-Write-Host '     npm install --no-fund --no-audit --ignore-scripts' -ForegroundColor Yellow
-Write-Host '     node node_modules\electron\install.js' -ForegroundColor Yellow
-Write-Host '     npm install --workspace web --no-fund --no-audit --ignore-scripts' -ForegroundColor Yellow
+Write-Host '     npm install --no-fund --no-audit' -ForegroundColor Yellow
+Write-Host '     npm install --workspace web --no-fund --no-audit' -ForegroundColor Yellow
 Write-Host '     npm run build -w web' -ForegroundColor Yellow
-Write-Host '  3. Try hermes dashboard / hermes desktop again' -ForegroundColor White
+Write-Host '  3. Re-enable antivirus' -ForegroundColor White
+Write-Host '  4. Try hermes dashboard / hermes desktop again' -ForegroundColor White
 Write-Host ''
 
 Write-Host ''
