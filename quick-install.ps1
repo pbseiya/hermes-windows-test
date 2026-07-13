@@ -500,13 +500,28 @@ if (-not $SkipInstall) {
         }
 
         # Build web UI for dashboard (so it works immediately without rebuilding)
-        Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
-        cmd /c "npm.cmd run build -w web 2>nul"
-        if ($LASTEXITCODE -eq 0) {
-            Write-Ok 'Dashboard web UI built -- ready to use immediately'
+        Write-Info 'Installing web workspace dependencies...'
+        $webOk = $false
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            cmd /c "npm.cmd install --workspace web --no-fund --no-audit 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
+            if ($attempt -lt 3) {
+                Write-Warn "  Web install failed (antivirus?) -- Retrying..."
+                Start-Sleep -Seconds 10
+            }
+        }
+        if ($webOk) {
+            Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
+            cmd /c "npm.cmd run build -w web 2>nul"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok 'Dashboard web UI built -- ready to use immediately'
+            }
+            else {
+                Write-Warn 'Dashboard web UI build failed -- will build on first launch'
+            }
         }
         else {
-            Write-Warn 'Dashboard web UI build skipped -- will build on first launch'
+            Write-Warn 'Web workspace install failed -- dashboard will need manual fix'
         }
 
         # Pre-build desktop (Electron) so hermes desktop launches immediately
@@ -961,6 +976,8 @@ Write-Host '  1. Close all hermes processes' -ForegroundColor White
 Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
 Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
 Write-Host '     npm install --no-fund --no-audit' -ForegroundColor Yellow
+Write-Host '     npm install --workspace web --no-fund --no-audit' -ForegroundColor Yellow
+Write-Host '     npm run build -w web' -ForegroundColor Yellow
 Write-Host '  3. Try hermes dashboard / hermes desktop again' -ForegroundColor White
 Write-Host ''
 
