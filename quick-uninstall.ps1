@@ -11,6 +11,16 @@ function Write-Info  { param($msg) Write-Host "[INFO] $msg" -ForegroundColor Cya
 function Write-Warn  { param($msg) Write-Host "[!] $msg" -ForegroundColor Yellow }
 function Write-Step  { param($msg) Write-Host ("`n=== {0} ===" -f $msg) -ForegroundColor Magenta }
 
+# Helper: Fast directory removal using robocopy trick
+function Remove-Fast {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return }
+    $emptyDir = Join-Path $env:TEMP 'empty_for_rmdir'
+    if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
+    cmd /c "robocopy `"$emptyDir`" `"$Path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
+    Remove-Item $Path -Force -ErrorAction SilentlyContinue
+}
+
 Write-Host ''
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host '   Hermes Agent Quick Uninstall (User-Space -- No Admin)' -ForegroundColor Cyan
@@ -20,13 +30,12 @@ Write-Host ''
 # --- Step 1: Stop running processes ---
 Write-Step 'Step 1: Stop running processes'
 
-Get-Process -Name 'hermes' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Get-Process -Name 'Hermes' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Get-Process -Name 'hermes','Hermes','pythonw' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Get-Process | Where-Object {
     $_.Path -like '*hermes*' -and $_.ProcessName -ne 'powershell'
 } | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
-Write-Ok 'Hermes processes stopped'
+Write-Ok 'Processes stopped'
 
 # --- Step 2: Remove scheduled tasks ---
 Write-Step 'Step 2: Remove scheduled tasks'
@@ -44,20 +53,28 @@ $startupDir = [System.Environment]::GetFolderPath('Startup')
 Get-ChildItem -Path $startupDir -Filter 'Hermes*' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 Write-Ok 'Startup shortcuts removed'
 
-# --- Step 4: Remove hermes installation ---
+# --- Step 4: Remove hermes installation (fast: robocopy all node_modules) ---
 Write-Step 'Step 4: Remove hermes installation'
 
 $hermesDir = Join-Path $env:LOCALAPPDATA 'hermes'
 if (Test-Path $hermesDir) {
-    Write-Info 'Removing hermes (this may take a minute)...'
-    # Use robocopy trick for node_modules (faster than Remove-Item)
-    $nm = Join-Path $hermesDir 'hermes-agent\node_modules'
-    if (Test-Path $nm) {
-        $emptyDir = Join-Path $env:TEMP 'empty_for_uninstall'
-        if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
-        cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
-        Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+    Write-Info 'Removing hermes (using fast delete)...'
+
+    # Fast-delete all node_modules directories (4 locations)
+    $nodeModulesPaths = @(
+        (Join-Path $hermesDir 'hermes-agent\node_modules'),
+        (Join-Path $hermesDir 'hermes-agent\web\node_modules'),
+        (Join-Path $hermesDir 'hermes-agent\apps\desktop\node_modules'),
+        (Join-Path $hermesDir 'hermes-agent\ui-tui\node_modules')
+    )
+    foreach ($nm in $nodeModulesPaths) {
+        if (Test-Path $nm) {
+            Write-Info "  Cleaning: $($nm.Replace($hermesDir, ''))"
+            Remove-Fast -Path $nm
+        }
     }
+
+    # Now remove the entire hermes directory (much faster after node_modules cleared)
     Remove-Item $hermesDir -Recurse -Force -ErrorAction SilentlyContinue
     if (-not (Test-Path $hermesDir)) {
         Write-Ok 'Hermes removed'
@@ -68,7 +85,7 @@ if (Test-Path $hermesDir) {
     Write-Info 'Hermes not found -- skipping'
 }
 
-# --- Step 5: Remove portable tools ---
+# --- Step 5: Remove portable tools (fast: robocopy) ---
 Write-Step 'Step 5: Remove portable tools'
 
 $dirsToRemove = @(
@@ -81,11 +98,11 @@ $dirsToRemove = @(
 
 foreach ($dir in $dirsToRemove) {
     if (Test-Path $dir.Path) {
-        Remove-Item $dir.Path -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Fast -Path $dir.Path
         if (-not (Test-Path $dir.Path)) {
             Write-Ok "$($dir.Name) removed"
         } else {
-            Write-Warn "$($dir.Name) -- some files locked, will clean from PATH"
+            Write-Warn "$($dir.Name) -- some files locked"
         }
     } else {
         Write-Info "$($dir.Name) not found -- skipping"
@@ -126,11 +143,15 @@ Write-Step 'Step 7: Clean npm cache'
 
 $npmCache = Join-Path $env:LOCALAPPDATA 'npm-cache'
 if (Test-Path $npmCache) {
-    Remove-Item $npmCache -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Fast -Path $npmCache
     Write-Ok 'npm cache removed'
 } else {
     Write-Info 'npm cache not found -- skipping'
 }
+
+# --- Cleanup temp ---
+Remove-Item (Join-Path $env:TEMP 'empty_for_rmdir') -Force -ErrorAction SilentlyContinue
+Remove-Item (Join-Path $env:TEMP 'empty_for_uninstall') -Force -ErrorAction SilentlyContinue
 
 # --- Summary ---
 Write-Host ''
