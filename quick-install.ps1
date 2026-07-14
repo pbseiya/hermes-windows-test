@@ -954,7 +954,8 @@ else {
 
     # Create batch file for dashboard
     $dashboardBat = Join-Path $startupDir 'hermes-dashboard.bat'
-    $dashboardContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`n`"$hermesBin`" dashboard --no-open"
+    $nodeDir = Join-Path $env:USERPROFILE '.local\node'
+    $dashboardContent = "@echo off`r`nset PATH=$nodeDir;$venvScripts;%PATH%`r`nset HERMES_HOME=$env:LOCALAPPDATA\hermes`r`necho [%date% %time%] Starting Hermes Dashboard... >> `"%LOCALAPPDATA%\hermes\logs\dashboard-startup.log`"`r`n`"$hermesBin`" dashboard --no-open >> `"%LOCALAPPDATA%\hermes\logs\dashboard-startup.log`" 2>&1"
     [System.IO.File]::WriteAllText($dashboardBat, $dashboardContent)
 
     # Create batch file for desktop (with DPAPI workaround for managed computers)
