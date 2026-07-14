@@ -303,6 +303,14 @@ if ($pythonIsValid) {
     }
     else {
         Write-Warn 'pip not found -- Installing via get-pip.py...'
+        # Find python directory from current python executable
+        $currentPython = (Get-Command python -ErrorAction SilentlyContinue).Source
+        if (-not $currentPython) {
+            $currentPython = (Get-Command python3 -ErrorAction SilentlyContinue).Source
+        }
+        $pythonDir = Split-Path $currentPython -Parent
+        $pythonExe = $currentPython
+
         $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
         $getPipFile = Join-Path $pythonDir 'get-pip.py'
         Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
