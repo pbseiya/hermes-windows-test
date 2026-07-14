@@ -993,6 +993,21 @@ else {
             }
         }
     }
+
+    # Start gateway immediately after installation
+    Write-Info 'Starting Telegram Gateway...'
+    $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes'
+    $env:VIRTUAL_ENV = Join-Path $hermesInstallDir 'venv'
+    $env:PYTHONPATH = "$hermesInstallDir;$venvLib"
+    Start-Process -FilePath $venvPythonPath -ArgumentList '-m', 'hermes_cli.main', 'gateway', 'run' -WindowStyle Hidden
+    Start-Sleep -Seconds 10
+    $gwProcess = Get-Process -Name 'pythonw' -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*hermes*' }
+    if ($gwProcess) {
+        Write-Ok 'Telegram Gateway started'
+    }
+    else {
+        Write-Warn 'Gateway failed to start -- Run: hermes gateway start'
+    }
 }
 
 # =============================================================================
