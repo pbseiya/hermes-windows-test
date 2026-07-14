@@ -526,7 +526,7 @@ if (-not $SkipInstall) {
         $webOk = $false
         for ($attempt = 1; $attempt -le 5; $attempt++) {
             Write-Info "  Web install attempt $attempt/5..."
-            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
+            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
             if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
             if ($attempt -lt 5) {
                 $delay = $attempt * 15
