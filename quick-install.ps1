@@ -302,8 +302,11 @@ if ($pythonIsValid) {
         Write-Ok "pip $pipVer"
     }
     else {
-        Write-Warn 'pip not found -- Installing...'
-        python -m ensurepip --upgrade 2>$null
+        Write-Warn 'pip not found -- Installing via get-pip.py...'
+        $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
+        $getPipFile = Join-Path $pythonDir 'get-pip.py'
+        Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
+        & $pythonExe $getPipFile 2>$null
         Write-Ok 'pip installed'
     }
 }
