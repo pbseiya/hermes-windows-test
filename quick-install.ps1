@@ -255,6 +255,9 @@ if (-not $pythonIsValid) {
         # Install pip
         $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
         $getPipFile = Join-Path $pythonDir 'get-pip.py'
+        # Delete existing file first (may be locked from previous install)
+        Remove-Item $getPipFile -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
         Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
 
         $pythonExe = Join-Path $pythonDir 'python.exe'
@@ -313,6 +316,9 @@ if ($pythonIsValid) {
 
         $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
         $getPipFile = Join-Path $pythonDir 'get-pip.py'
+        # Delete existing file first (may be locked from previous install)
+        Remove-Item $getPipFile -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
         Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
         $prevEAP = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
