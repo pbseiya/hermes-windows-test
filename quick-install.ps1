@@ -949,7 +949,8 @@ else {
 
     # Create batch file for gateway (direct pythonw call - no interactive prompts)
     $gatewayBat = Join-Path $startupDir 'hermes-gateway.bat'
-    $gatewayContent = "@echo off`r`nset `"PATH=$venvScripts;%PATH%`"`r`nstart /B `"$venvPythonPath`" -m hermes_cli.main gateway run"
+    $nodeDir = Join-Path $env:USERPROFILE '.local\node'
+    $gatewayContent = "@echo off`r`nset PATH=$nodeDir;$venvScripts;%PATH%`r`nset HERMES_HOME=$env:LOCALAPPDATA\hermes`r`necho [%date% %time%] Starting Hermes Gateway... >> `"%LOCALAPPDATA%\hermes\logs\gateway-startup.log`"`r`nstart /B `"`" `"$venvPythonPath`" -m hermes_cli.main gateway run >> `"%LOCALAPPDATA%\hermes\logs\gateway-startup.log`" 2>&1"
     [System.IO.File]::WriteAllText($gatewayBat, $gatewayContent)
 
     # Create batch file for dashboard
