@@ -993,27 +993,18 @@ else {
     catch {
         Write-Warn 'Task Scheduler creation failed -- Using Startup Folder instead'
 
-        # Use Startup Folder instead
+        # Use Startup Folder instead - copy bat files directly (more reliable than shortcuts)
         $startupFolder = [System.IO.Path]::Combine($env:APPDATA, 'Microsoft\Windows\Start Menu\Programs\Startup')
 
-        # Create shortcut for gateway
-        $wsGateway = New-Object -ComObject WScript.Shell
-        $shortcutGateway = $wsGateway.CreateShortcut("$startupFolder\HermesGateway.lnk")
-        $shortcutGateway.TargetPath = 'cmd.exe'
-        $shortcutGateway.Arguments = '/c "set PATH=' + $venvScripts + ';%PATH%" && "' + $gatewayBat + '"'
-        $shortcutGateway.WindowStyle = 7  # Minimized
-        $shortcutGateway.Save()
+        # Copy gateway bat file to Startup Folder
+        $gatewayStartupBat = Join-Path $startupFolder 'hermes-gateway.bat'
+        Copy-Item $gatewayBat $gatewayStartupBat -Force
+        Write-Ok '  - hermes-gateway.bat copied to Startup Folder'
 
-        # Create shortcut for dashboard
-        $shortcutDashboard = $wsGateway.CreateShortcut("$startupFolder\HermesDashboard.lnk")
-        $shortcutDashboard.TargetPath = 'cmd.exe'
-        $shortcutDashboard.Arguments = '/c "set PATH=' + $venvScripts + ';%PATH%" && "' + $dashboardBat + '"'
-        $shortcutDashboard.WindowStyle = 7  # Minimized
-        $shortcutDashboard.Save()
-
-        Write-Ok 'Created Startup Folder shortcuts'
-        Write-Ok '  - HermesGateway.lnk (Telegram)'
-        Write-Ok '  - HermesDashboard.lnk (Dashboard)'
+        # Copy dashboard bat file to Startup Folder
+        $dashboardStartupBat = Join-Path $startupFolder 'hermes-dashboard.bat'
+        Copy-Item $dashboardBat $dashboardStartupBat -Force
+        Write-Ok '  - hermes-dashboard.bat copied to Startup Folder'
     }
 
     # Fix gateway startup scripts to use venv Python (not embeddable Python)
