@@ -474,8 +474,10 @@ if (-not $SkipInstall) {
         $env:Path = $venvScripts + ';' + $env:Path
         
         # Install hermes with all extras (Python)
+        # Use --link-mode=copy to avoid uv trampoline .exe files that antivirus blocks
         Write-Info 'Installing hermes-agent Python packages...'
-        uv pip install -e '.[all]' --quiet
+        $env:UV_LINK_MODE = 'copy'
+        uv pip install -e '.[all]' --link-mode=copy --quiet
         Write-Ok 'Python packages installed'
 
         # Configure npm for corporate environments (antivirus-friendly)
