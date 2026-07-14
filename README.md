@@ -16,6 +16,7 @@ irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-ins
 ```powershell
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
 ```
+Takes ~2-3 minutes (uses fast robocopy-based deletion for all node_modules)
 
 ---
 
