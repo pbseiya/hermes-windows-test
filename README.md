@@ -31,6 +31,21 @@ irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uni
 
 ---
 
+## Important: Antivirus
+
+**For full functionality (Dashboard + Desktop), temporarily disable antivirus during installation:**
+
+1. Open Windows Security > Virus & threat protection > Manage settings
+2. Turn off **Real-time protection**
+3. Run the install script
+4. Turn on Real-time protection after installation
+
+**If you don't disable antivirus:**
+- ✅ TUI + Telegram will work immediately
+- ❌ Dashboard + Desktop need manual fix (see Troubleshooting)
+
+---
+
 ## What the script installs automatically
 
 - Git Portable v2.47+
@@ -39,60 +54,61 @@ irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uni
 - uv (Python package manager)
 - Hermes Agent v0.18+ (Dashboard, Desktop, TUI)
 - Antigravity CLI (agy) - for fixing hermes
-- Auto-start after login
+- Auto-start after login (Telegram Gateway + Dashboard)
 
 ---
 
 ## After installation
 
+### Immediately available (no antivirus disable needed)
 ```powershell
 hermes                          # Chat with Hermes (TUI)
-hermes dashboard                # Open Web Dashboard
-hermes desktop                  # Open Desktop App (Electron)
-hermes model                    # Change model
 hermes doctor                   # Diagnose problems
+hermes model                    # Change model
 ```
 
-**Dashboard:** http://localhost:9119
+### Telegram Gateway
+- ✅ Auto-starts after installation
+- ✅ Auto-starts after reboot (~30 seconds after login)
+- Bot will respond to messages automatically
 
-**Start Telegram Gateway + Dashboard after login:**
+### Dashboard (requires antivirus disabled during install)
 ```powershell
-schtasks /Run /TN "HermesGateway"
-schtasks /Run /TN "HermesDashboard"
+hermes dashboard                # Opens http://localhost:9119
+```
+- ✅ Auto-starts after reboot (~60 seconds after login)
+
+### Desktop (requires antivirus disabled during install)
+```powershell
+hermes desktop                  # Opens Electron desktop app
 ```
 
 ---
 
-## FAQ
+## Troubleshooting
 
-### Q: Do I need admin rights?
-**A:** No. Everything installs in your user folder.
+### Dashboard/Desktop not working (antivirus blocked npm)
 
-### Q: How long does it take?
-**A:** 10-20 minutes depending on internet speed and antivirus.
-
-### Q: Do I need to restart?
-**A:** No. But open a new PowerShell window after installation.
-
-### Q: Dashboard/Desktop does not work?
-**A:** Run these commands to fix:
+1. Temporarily disable antivirus real-time protection
+2. Open PowerShell and run:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
 npm install --no-fund --no-audit
-npm install --workspace web --no-fund --no-audit
 npm run build -w web
 ```
-If still broken, uninstall and reinstall:
-```powershell
-irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
-irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
-```
+3. Re-enable antivirus
+4. Run `hermes dashboard` or `hermes desktop`
 
-### Q: Telegram bot not responding?
-**A:** Check: 1) Bot Token is correct  2) Chat ID is correct (get from @userinfobot)  3) Run `hermes gateway start`
+### Telegram bot not responding
 
-### Q: How to use agy to fix hermes?
-**A:** Run `agy`, login with Google Account (free), then ask agy to fix hermes.
+1. Check gateway is running: `Get-Process -Name pythonw`
+2. If not running: `hermes gateway start`
+3. Check logs: `type %LOCALAPPDATA%\hermes\logs\gateway.log`
+
+### After reboot - services not starting
+
+- Check Startup Folder: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
+- Should have: `HermesGateway.lnk`, `HermesDashboard.lnk`
 
 ---
 
@@ -111,4 +127,4 @@ irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-ins
 ---
 
 **Created by:** Hermes Agent Training Team
-**Updated:** 2026-07-13
+**Updated:** 2026-07-14
