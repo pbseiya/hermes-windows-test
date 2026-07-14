@@ -314,7 +314,10 @@ if ($pythonIsValid) {
         $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
         $getPipFile = Join-Path $pythonDir 'get-pip.py'
         Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
-        Start-Process -FilePath $pythonExe -ArgumentList $getPipFile -Wait -NoNewWindow -RedirectStandardError $null
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        & $pythonExe $getPipFile 2>&1 | Out-Null
+        $ErrorActionPreference = $prevEAP
         Write-Ok 'pip installed'
     }
 }
