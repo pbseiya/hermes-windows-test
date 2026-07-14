@@ -998,6 +998,7 @@ else {
     Write-Info 'Starting Telegram Gateway...'
     $env:HERMES_HOME = Join-Path $env:LOCALAPPDATA 'hermes'
     $env:VIRTUAL_ENV = Join-Path $hermesInstallDir 'venv'
+    $venvLib = Join-Path $hermesInstallDir 'venv\Lib\site-packages'
     $env:PYTHONPATH = "$hermesInstallDir;$venvLib"
     Start-Process -FilePath $venvPythonPath -ArgumentList '-m', 'hermes_cli.main', 'gateway', 'run' -WindowStyle Hidden
     Start-Sleep -Seconds 10
