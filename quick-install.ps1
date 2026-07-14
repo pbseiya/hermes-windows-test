@@ -405,19 +405,26 @@ if (-not $SkipInstall) {
             # Kill any git processes that might be holding the directory
             Get-Process git -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 2
-            
-            # Remove directory with retry (use robocopy for node_modules)
+
+            # Remove directory with retry (use robocopy for ALL node_modules)
             $retryCount = 0
             while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 5)) {
                 try {
-                    # Empty node_modules first (robocopy trick for fast deletion)
-                    $nm = Join-Path $hermesInstallDir 'node_modules'
-                    if (Test-Path $nm) {
-                        $emptyDir = Join-Path $env:TEMP 'empty_dir_for_rmdir'
-                        if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
-                        cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
-                        Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+                    # Fast-delete all node_modules directories using robocopy trick
+                    $nodeModulesPaths = @(
+                        (Join-Path $hermesInstallDir 'node_modules'),
+                        (Join-Path $hermesInstallDir 'web\node_modules'),
+                        (Join-Path $hermesInstallDir 'apps\desktop\node_modules'),
+                        (Join-Path $hermesInstallDir 'ui-tui\node_modules')
+                    )
+                    $emptyDir = Join-Path $env:TEMP 'empty_dir_for_rmdir'
+                    if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
+                    foreach ($nm in $nodeModulesPaths) {
+                        if (Test-Path $nm) {
+                            cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>nul"
+                        }
                     }
+                    Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
                     Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction Stop
                     break
                 }
