@@ -368,10 +368,26 @@ $hermesCmd = Get-Command hermes -ErrorAction SilentlyContinue
 
 if ($hermesCmd -and -not $SkipInstall -and -not $Force) {
     Write-Warn 'Found existing hermes installation'
-    $reply = Read-Host 'Reinstall? (y/N)'
-    if ($reply -ne 'y' -and $reply -ne 'Y') {
-        Write-Info 'Skipping installation -- Using existing hermes'
-        $SkipInstall = $true
+
+    # Check if existing hermes actually works
+    $hermesWorks = $false
+    try {
+        $testVer = & hermes --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $testVer -notlike '*Error*' -and $testVer -notlike '*Traceback*') {
+            $hermesWorks = $true
+        }
+    }
+    catch { }
+
+    if (-not $hermesWorks) {
+        Write-Warn 'Existing hermes is broken -- Reinstalling...'
+    }
+    else {
+        $reply = Read-Host 'Reinstall? (y/N)'
+        if ($reply -ne 'y' -and $reply -ne 'Y') {
+            Write-Info 'Skipping installation -- Using existing hermes'
+            $SkipInstall = $true
+        }
     }
 }
 
