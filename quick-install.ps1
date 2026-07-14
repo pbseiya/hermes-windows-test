@@ -135,6 +135,9 @@ if (-not $gitCmd) {
         Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
 
         Write-Ok 'Git Portable installed'
+
+        # Refresh PATH immediately so git is available in this session
+        $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
     }
     catch {
         Write-Err "Git download failed: $_`nPlease check your internet connection and try again."
