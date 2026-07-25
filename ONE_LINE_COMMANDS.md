@@ -70,6 +70,33 @@ hermes gateway restart
 
 ---
 
+## 🔑 Change API Key After Installation
+
+If you skipped the API key prompts during installation or need to update your key:
+
+### Method 1: Interactive Wizard (Recommended)
+```powershell
+hermes model
+```
+
+### Method 2: Direct Command
+```powershell
+hermes config set model.api_key "your-api-key-here"
+```
+
+### Method 3: Edit .env File
+```powershell
+notepad $env:LOCALAPPDATA\hermes\.env
+```
+
+### ⚠️ Restart After Change
+```powershell
+hermes gateway restart
+hermes chat -q "สวัสดี"   # Test
+```
+
+---
+
 ## Uninstall
 
 ```powershell
