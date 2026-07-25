@@ -1,737 +1,255 @@
----
-marp: true
-theme: default
-paginate: true
-header: "Course 0: Hermes + AI Harness"
-footer: "Module 2: ติดตั้งและตั้งค่า Hermes"
-style: |
-  section {
-    font-family: 'Sarabun', 'TH Sarabun New', sans-serif;
-    background: white;
-  }
-  h1 {
-    color: #2563eb;
-    font-size: 2.5em;
-  }
-  h2 {
-    color: #1e40af;
-    font-size: 1.8em;
-  }
-  code {
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Fira Code', monospace;
-  }
-  pre code {
-    display: block;
-    padding: 16px;
-    background: #1e293b;
-    color: #e2e8f0;
-    border-radius: 8px;
-    font-size: 0.9em;
-  }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-  }
-  th {
-    background: #3b82f6;
-    color: white;
-    padding: 12px;
-    text-align: left;
-  }
-  td {
-    padding: 10px;
-    border-bottom: 1px solid #e5e7eb;
-  }
-  tr:nth-child(even) {
-    background: #f9fafb;
-  }
-  .highlight {
-    background: #fef3c7;
-    padding: 16px;
-    border-left: 4px solid #f59e0b;
-    margin: 20px 0;
-  }
-  .success {
-    background: #d1fae5;
-    padding: 16px;
-    border-left: 4px solid #10b981;
-    margin: 20px 0;
-  }
-  .warning {
-    background: #fee2e2;
-    padding: 16px;
-    border-left: 4px solid #ef4444;
-    margin: 20px 0;
-  }
-  .info {
-    background: #dbeafe;
-    padding: 16px;
-    border-left: 4px solid #3b82f6;
-    margin: 20px 0;
-  }
----
-
-# Module 2: ติดตั้งและตั้งค่า Hermes
+# Module 2: Hermes Installation & Setup Summary (Windows)
 
 ## 🎯 Learning Objectives
-
-หลังจบ Module นี้ ผู้เรียนจะสามารถ:
-
-1. ✅ รัน Quick Install Script ได้สำเร็จ (ไม่ต้อง sudo/admin)
-2. ✅ สร้าง Telegram Bot Token ได้
-3. ✅ เข้าใจ LiteLLM Proxy + qwen3.7-plus
-4. ✅ เปิด Dashboard ได้ (http://localhost:9119)
-5. ✅ ตั้งค่า Auto-start หลังรีสตาร์ทได้
-6. ✅ ทดสอบการใช้งานพื้นฐานได้
+By the end of this module, you will be able to:
+* Run the Quick Install Script without admin rights (user-space installation).
+* Create and configure a Telegram Bot Token and Chat ID.
+* Understand LiteLLM Proxy integration with the `qwen3.7-plus` model.
+* Access the local Dashboard (`http://localhost:9119`).
+* Configure auto-start services post-reboot.
+* Change API key after installation if needed.
 
 ---
 
-# 🚀 วิธีติดตั้ง: Quick Install Script
+## 🤖 Step 1: Create Telegram Bot Token (Prerequisite)
+*Do this **before** running the Quick Install Script.*
 
-## ง่ายที่สุด — รันสคริปต์เดียวจบ!
+1. Open Telegram and search for `@BotFather`.
+2. Send `/newbot`.
+3. Set a name (e.g., "My Hermes Bot") and a username (must end in `bot`, e.g., `my_hermes_bot`).
+4. **Copy the generated Bot Token** (Format: `1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ`).
 
-<div class="success">
+### Get Your Telegram Chat ID
+*This restricts bot access to only you.*
 
-**สคริปต์จะติดตั้งทุกอย่างอัตโนมัติ:**
-- ✅ Node.js v22+ (nvm)
-- ✅ Python 3.11+ (pyenv/embeddable)
-- ✅ Git
-- ✅ Hermes Agent (npm)
-- ✅ LiteLLM Proxy config
-- ✅ Telegram Bot config
-- ✅ Auto-start หลังรีสตาร์ท
-
-**ไม่ต้อง sudo/admin rights!**
-
-</div>
+1. Open Telegram and search for `@userinfobot`.
+2. Send `/start`.
+3. **Copy the numeric ID** (e.g., `123456789`).
 
 ---
 
-# 📦 Step 1: รัน Quick Install Script
+## 🚀 Step 2: Quick Install Script
+Installs Git, Node.js v22+, Python 3.11+, uv, Hermes Agent, and Antigravity CLI automatically in **user-space** (no admin rights required).
 
-## Linux / macOS / WSL2
-
-```bash
-chmod +x quick-install.sh
-./quick-install.sh
-```
-
----
-
-## Windows (PowerShell)
-
+**Windows (PowerShell One-Liner):**
 ```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\quick-install.ps1
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
 ```
 
-<div class="info">
-
-**สคริปต์จะถาม 2 อย่าง:**
-1. OpenRouter API Key (Free Tier — ข้ามได้)
-2. **Telegram Bot Token** (สร้างก่อนรันสคริปต์)
-
-</div>
-
----
-
-# 🤖 Step 2: สร้าง Telegram Bot Token
-
-## ทำก่อนรัน Quick Install Script!
-
-### ขั้นตอนการสร้าง Bot
-
-1. เปิด Telegram → ค้นหา `@BotFather`
-2. ส่งคำสั่ง: `/newbot`
-3. ตั้งชื่อ bot: "My Hermes Bot"
-4. ตั้ง username: "my_hermes_bot" (ต้องลงท้ายด้วย `bot`)
-5. รอ BotFather ตอบกลับ → **Copy Bot Token**
-
-<div class="highlight">
-
-**Bot Token ตัวอย่าง:**
-```
-1234567890:ABCdefGHIjklMNOpqrSTUvwxYZ
-```
-
-**เก็บ Token ไว้ให้ดี!** จะใช้ตอนรัน Quick Install Script
-
-</div>
-
----
-
-# 🔧 Step 2.5: ติดตั้ง Antigravity CLI (agy)
-
-## ฟรี ใช้ Google Account — ไม่ต้องถาม password!
-
-<div class="success">
-
-**ทำไมต้องมี agy?**
-- ใช้ Gemini ฟรีผ่าน Google Account ที่มีอยู่แล้ว
-- **ไม่ต้องถาม password** ตอนติดตั้ง (user-space install)
-- เหมาะสำหรับ **แก้ไข/ซ่อม hermes** เมื่อ hermes มีปัญหา
-- ⚠️ Free tier มี rate limit — เพียงพอสำหรับการซ่อม hermes
-
-</div>
-
-### Linux / macOS
-
-```bash
-curl -fsSL https://antigravity.google/cli/install.sh | bash
-```
-
-ติดตั้งที่ `~/.local/bin/agy`
-
-### Windows (PowerShell)
-
-```powershell
-irm https://antigravity.google/cli/install.ps1 | iex
-```
-
-ติดตั้งที่ `%LOCALAPPDATA%\agy\bin`
-
-### Windows (CMD)
-
+**Alternative: CMD**
 ```cmd
-curl -fsSL https://antigravity.google/cli/install.cmd -o install.cmd && install.cmd && del install.cmd
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex"
 ```
 
-### หลังติดตั้ง
+**Alternative: Double-Click**
+1. Download `quick-install.bat` from the repository
+2. Double-click to run
 
-```bash
-agy
-# จะเปิด browser ให้ login ด้วย Google Account ครั้งแรก
-```
+> **Note:** The script will prompt for:
+> - **LiteLLM API Key** (provided by instructor)
+> - **Telegram Bot Token** (from Step 1)
+> - **Telegram Chat ID** (from Step 1)
+>
+> You can press Enter to skip any prompt and add keys later.
+
+### ⚠️ Antivirus Warning
+**Temporarily disable antivirus during installation** for full Dashboard and Desktop functionality. If you don't, `npm` will be blocked and these features will fail (see Troubleshooting).
 
 ---
 
-# 🔑 Step 3: วาง API Keys ตอนรันสคริปต์
+## 🔧 Step 3: Antigravity CLI (`agy`)
+*Installed automatically by the script. A free CLI tool using your existing Google Account for Gemini access. Useful for fixing Hermes without password prompts.*
 
-## Quick Install Script จะถาม
-
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ถาม API Keys และ Telegram Bot Token
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-สร้าง Telegram Bot Token (ทำตาม Slide Module 02):
-
-  1. เปิด Telegram แล้วค้นหา @BotFather
-  2. ส่งคำสั่ง /newbot
-  3. ตั้งชื่อ bot (เช่น 'Hermes Assistant')
-  4. ตั้ง username (เช่น 'my_hermes_bot')
-  5. Copy token ที่ BotFather ให้ (รูปแบบ: 123456789:ABCdefGHI...)
-
-วาง Telegram Bot Token (หรือกด Enter เพื่อข้าม): _
-```
-
-<div class="success">
-
-**วาง Token ที่ได้จาก BotFather → กด Enter**
-
-</div>
+**Post-install:** Run `agy` to log in via your browser.
 
 ---
 
-# 📂 Step 4: ตำแหน่งที่ติดตั้ง (User-Space)
+## 📂 Step 4: User-Space Paths & PATH Configuration
+The script automatically configures your PATH. **Open a new PowerShell window** after installation.
 
-## ทุกอย่างอยู่ใน User Directory — ไม่ต้อง sudo!
-
-| โปรแกรม | Linux/macOS | Windows |
-|---------|-------------|---------|
-| Node.js v22+ | `~/.nvm/` | `~/.nvm/` หรือ `~/.local/node/` |
-| Python 3.11+ | `~/.pyenv/` | `~/.local/python/` |
-| Git | `~/.local/git/` | `~/.local/git/` |
-| npm global | `~/.npm-global/` | `~/.npm-global/` |
-| Hermes | `~/.npm-global/bin/hermes` | `~/.npm-global/hermes.cmd` |
-| **Antigravity CLI** | `~/.local/bin/agy` | `~\AppData\Local\agy\bin\` |
-
----
-
-# 🌐 Step 4.5: ตั้งค่า PATH อัตโนมัติ
-
-## ทุกโปรแกรมเรียกใช้ได้จากทุก folder
-
-<div class="success">
-
-**สคริปต์เพิ่ม PATH โดยอัตโนมัติ** เพื่อให้เรียกใช้ `hermes`, `agy`, `node`, `python`, `git` ได้จากทุกที่
-
-</div>
-
-### Linux / macOS
-
-เพิ่มใน shell config (`~/.bashrc` หรือ `~/.zshrc`):
-- `$HOME/.local/bin` — Git, agy
-- `$NVM_DIR` — Node.js (nvm)
-- `$PYENV_ROOT/bin` — Python (pyenv)
-- `$HOME/.npm-global/bin` — Hermes, npm global
-
-**หลังติดตั้งเสร็จ:**
-```bash
-source ~/.bashrc  # หรือ source ~/.zshrc
-```
-
-### Windows
-
-เพิ่มใน User Environment Variable:
-- `%USERPROFILE%\.local\git\bin` — Git
-- `%USERPROFILE%\.nvm` — Node.js (nvm)
-- `%USERPROFILE%\.local\node` — Node.js (portable)
-- `%USERPROFILE%\.local\python` — Python
-- `%USERPROFILE%\.npm-global` — Hermes
-- `%LOCALAPPDATA%\agy\bin` — Antigravity CLI
-
-**หลังติดตั้งเสร็จ:**
-เปิด PowerShell ใหม่เพื่อให้ PATH มีผล
+| Component | Windows Path |
+| :--- | :--- |
+| **Git** | `%USERPROFILE%\.local\git\` |
+| **Node.js** | `%USERPROFILE%\.local\node\` |
+| **Python** | `%USERPROFILE%\.local\python\` |
+| **uv** | `%USERPROFILE%\.local\bin\` |
+| **Hermes CLI** | `%LOCALAPPDATA%\hermes\hermes-agent\venv\Scripts\hermes.exe` |
+| **Antigravity** | `%LOCALAPPDATA%\agy\bin\` |
+| **Config Files** | `%LOCALAPPDATA%\hermes\.env`, `%LOCALAPPDATA%\hermes\config.yaml` |
 
 ---
 
-# 🧠 Step 5: LiteLLM Proxy Configuration
+## 🧠 Step 5: LiteLLM & Model Configuration
+Course 0 uses **LiteLLM Proxy** with the `qwen3.7-plus` model (1,000,000 token context).
 
-## AI Model ที่ใช้: qwen3.7-plus
-
-<div class="info">
-
-**Course 0 ใช้ LiteLLM Proxy** — ไม่ต้องสมัคร API key แยก!
-
-</div>
-
-### Configuration (ตั้งค่าอัตโนมัติโดยสคริปต์)
-
+**Default Config (`%LOCALAPPDATA%\hermes\config.yaml`):**
 ```yaml
-# ~/.hermes/config.yaml
 model:
   provider: custom:litellm
   default: qwen3.7-plus
+  base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
+  context_length: 1000000
 
-providers:
-  litellm:
-    base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
-    key_env: LITELLM_API_KEY
-    transport: openai_chat
-```
+dashboard:
+  enabled: true
+  port: 9119
 
-### .env
-
-```bash
-# ~/.hermes/.env
-LITELLM_API_KEY=<your-api-key-here>
-```
-
----
-
-# 🔄 Step 6: Model Switching
-
-## สลับ Models ได้ทันที
-
-### ใน Session (สลับเร็วๆ)
-
-```
-/model anthropic/claude-sonnet-4
-/model openai/gpt-4o
-/model openrouter/meta-llama/llama-3
-```
-
-<div class="success">
-
-**ข้อดี:** ไม่ต้อง restart Hermes
-สลับ model ได้ทันทีขณะใช้งาน
-
-</div>
-
-### Provider Routing
-
-```yaml
-# ~/.hermes/config.yaml
-provider_routing:
-  sort: "throughput"  # "price", "latency"
-```
-
-### Fallback Configuration
-
-```yaml
-model:
-  default: qwen3.7-plus
-  fallbacks:
-    - anthropic/claude-sonnet-4
-    - openai/gpt-4o
-```
-
----
-
-# 📊 Models ที่แนะนำ
-
-## เปรียบเทียบ Models
-
-| Model | จุดเด่น | ราคา/1M tokens | ใช้เมื่อ |
-|-------|---------|----------------|---------|
-| **qwen3.7-plus** | **Course 0 default** | **ฟรี (LiteLLM)** | **ทุกงาน** |
-| Claude Sonnet 4 | สมดุลดี | $3/$15 | งานทั่วไป |
-| GPT-4o | เร็ว ฉลาด | $5/$15 | งานต้องการความเร็ว |
-| Claude Opus 4 | ฉลาดสุด | $15/$75 | งานซับซ้อน |
-| Llama 3 | ฟรี | $0 | ทดสอบ |
-
-<div class="warning">
-
-**หมายเหตุ:** ราคาอาจเปลี่ยนแปลง ตรวจสอบที่ provider อีกครั้ง
-
-</div>
-
----
-
-# 🌐 Step 7: Dashboard
-
-## Web Dashboard — http://localhost:9119
-
-<div class="success">
-
-**Dashboard ทำให้คุณ:**
-- ✅ ดู session history
-- ✅ จัดการ cron jobs
-- ✅ ดู tools และ skills
-- ✅ ตรวจสอบ config
-- ✅ ดู usage statistics
-
-</div>
-
-### เปิด Dashboard
-
-```bash
-# เริ่ม dashboard
-hermes dashboard start
-```
-
-### เปิด browser
-
-```
-http://localhost:9119
-```
-
-<div class="info">
-
-**Dashboard จะ auto-start หลังรีสตาร์ท**
-ไม่ต้องรันคำสั่งซ้ำ!
-
-</div>
-
----
-
-# 📱 Step 8: Telegram Gateway
-
-## เชื่อมต่อ Hermes กับ Telegram
-
-### สิ่งที่ได้ตั้งค่าแล้ว
-
-สคริปต์จะตั้งค่า Telegram Gateway อัตโนมัติ:
-
-```yaml
-# ~/.hermes/config.yaml
-telegram:
-  reactions: true  # ตอบโต้ได้ทันที
-```
-
-```bash
-# ~/.hermes/.env
-TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHI...
-```
-
-### เริ่ม Gateway (ถ้ายังไม่เริ่ม)
-
-```bash
-hermes gateway start
-```
-
-### ทดสอบ
-
-1. เปิด Telegram → หา bot ที่สร้าง
-2. ส่งข้อความ: "สวัสดี"
-3. Hermes จะตอบกลับ!
-
----
-
-# ⚡ Step 9: Auto-Start หลังรีสตาร์ท
-
-## Hermes จะเริ่มอัตโนมัติหลัง login
-
-### Linux (systemd)
-
-```bash
-systemctl --user status hermes-gateway hermes-dashboard
-systemctl --user start hermes-gateway
-```
-
-### macOS (launchd)
-
-```bash
-launchctl list | grep hermes
-launchctl load ~/Library/LaunchAgents/com.hermes.gateway.plist
-```
-
-### Windows (Task Scheduler)
-
-```powershell
-schtasks /Query /TN "HermesGateway"
-schtasks /Run /TN "HermesGateway"
-```
-
----
-
-# ✅ Step 10: ทดสอบการใช้งาน
-
-## ทดสอบพื้นฐาน
-
-```bash
-# เริ่ม Hermes
-hermes
-
-# ส่งข้อความทดสอบ
-You: สวัสดี ช่วยอะไรได้บ้าง?
-Hermes: สวัสดีครับ! ผมเป็น AI Agent ช่วยทำงานได้หลายอย่าง...
-```
-
-## ทดสอบ Commands
-
-```
-/help          # ดูรายการ commands
-/model         # ดู/เปลี่ยน model
-/tools         # ดู tools ที่เปิดใช้
-/config        # ดู configuration
-/quit          # ออกจาก Hermes
-```
-
-## ทดสอบ Telegram
-
-1. เปิด Telegram → หา bot
-2. ส่ง: "ทดสอบ"
-3. ดูว่า bot ตอบกลับไหม
-
----
-
-# 🔧 Security & Permissions
-
-## การตั้งค่าที่ตั้งไว้
-
-<div class="info">
-
-**สคริปต์ตั้งค่าให้แล้ว — ไม่ต้องทำเอง**
-
-</div>
-
-```yaml
-# ~/.hermes/config.yaml
-
-# ไม่ต้อง approve commands (YOLO mode)
 approvals:
   mode: off
 
-# Telegram ตอบโต้ได้ทันที
 telegram:
   reactions: true
+```
 
-# แสดง credentials ไม่ต้องซ่อน
+### Model Switching & Recommendations
+Switch models on-the-fly in a session without restarting:
+```text
+/model anthropic/claude-sonnet-4
+/model openai/gpt-4o
+```
+
+| Model | Price/1M Tokens | Best For |
+| :--- | :--- | :--- |
+| **qwen3.7-plus** | **Free (LiteLLM)** | **Default for all tasks** |
+| Claude Sonnet 4 | $3 / $15 | General tasks |
+| GPT-4o | $5 / $15 | Speed & intelligence |
+| Claude Opus 4 | $15 / $75 | Complex reasoning |
+| Llama 3 | Free | Testing |
+
+---
+
+## 🔑 Step 6: Change API Key After Installation
+
+If you skipped the API key prompts during installation or need to update your key:
+
+### Method 1: Interactive Wizard (Recommended)
+```powershell
+hermes model
+```
+Follow the prompts to select provider and enter your API key.
+
+### Method 2: Direct Command
+```powershell
+hermes config set model.api_key "your-api-key-here"
+```
+
+### Method 3: Edit .env File
+```powershell
+notepad $env:LOCALAPPDATA\hermes\.env
+```
+Add or update: `LITELLM_API_KEY=your-key-here`
+
+### ⚠️ Restart After Change
+```powershell
+hermes gateway restart
+hermes chat -q "สวัสดี"   # Test
+```
+
+---
+
+## 🌐 Step 7: Dashboard, Telegram & Auto-Start
+
+### Web Dashboard
+Access via `http://localhost:9119` to view session history, cron jobs, tools, and stats.
+```powershell
+hermes dashboard
+```
+
+### Telegram Gateway
+```powershell
+hermes gateway start
+```
+
+### Auto-Start Configuration
+Services are configured to start automatically on login via **Windows Task Scheduler**:
+- `HermesGateway` (30s delay after login)
+- `HermesDashboard` (60s delay after login)
+
+**Manual start (if auto-start failed):**
+```powershell
+schtasks /Run /TN "HermesGateway"
+schtasks /Run /TN "HermesDashboard"
+```
+
+---
+
+## 🔒 Security & Permissions (Course 0 Defaults)
+*Configured automatically for ease of use. Change for production.*
+```yaml
+approvals:
+  mode: off          # YOLO mode: no command approvals needed
+telegram:
+  reactions: true    # Immediate Telegram responses
 security:
   redact_secrets: false
-
-# แสดงข้อมูลส่วนตัวไม่ต้องซ่อน
 privacy:
   redact_pii: false
 ```
 
-<div class="warning">
-
-**หมายเหตุ:** การตั้งค่านี้เหมาะสำหรับ Course 0
-สำหรับ production ควรเปลี่ยน `approvals.mode: manual`
-
-</div>
-
 ---
 
-# 🐛 Troubleshooting (1/3)
-
-## ปัญหาที่พบบ่อย
+## 🐛 Troubleshooting Guide
 
 ### 1. `hermes: command not found`
-
-<div class="warning">
-
-**สาเหตุ:** PATH ไม่ได้ตั้ง
-
-</div>
-
-**แก้ไข:**
-```bash
-# Linux / macOS
-export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
-echo 'export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
+**Cause:** PATH not loaded.
+**Fix:** Open a new PowerShell window, or use the full path:
 ```powershell
-# Windows
-$env:Path = "$env:USERPROFILE\.npm-global;$env:Path"
+& "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"
 ```
 
-### 2. `nvm: command not found`
-
-**แก้ไข:**
-```bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-```
-
----
-
-# 🐛 Troubleshooting (2/3)
-
-### 3. `pyenv: command not found`
-
-**แก้ไข:**
-```bash
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-```
-
-### 4. `node is not recognized` (Windows)
-
-**แก้ไข:**
+### 2. Dashboard / Desktop Not Working
+**Cause:** Antivirus blocked `npm` during installation.
+**Fix:**
+1. Temporarily disable antivirus real-time protection
+2. Run the following commands:
 ```powershell
-$env:Path = "$env:USERPROFILE\.local\node;$env:Path"
-# หรือ
-$env:Path = "$env:USERPROFILE\.nvm\v22.14.0;$env:Path"
+cd $env:LOCALAPPDATA\hermes\hermes-agent
+npm install --no-fund --no-audit
+npm install --workspace web --no-fund --no-audit
+npm run build -w web
 ```
+3. Re-enable antivirus
+4. Run `hermes dashboard` or `hermes desktop`
 
-### 5. `python is not recognized` (Windows)
-
-**แก้ไข:**
+### 3. Telegram bot not responding
+**Fix:** Check service status and restart the gateway.
 ```powershell
-$env:Path = "$env:USERPROFILE\.local\python;$env:USERPROFILE\.local\python\Scripts;$env:Path"
+# Check if running
+Get-Process -Name pythonw
+
+# Restart
+hermes gateway restart
+
+# Check logs
+type $env:LOCALAPPDATA\hermes\logs\gateway.log
 ```
 
----
-
-# 🐛 Troubleshooting (3/3)
-
-### 6. `API key invalid`
-
-<div class="warning">
-
-**สาเหตุ:** LiteLLM API key ไม่ถูกต้อง
-
-</div>
-
-**แก้ไข:**
-```bash
-# ตรวจสอบ .env
-cat ~/.hermes/.env
-
-# ควรเห็น:
-# LITELLM_API_KEY=<your-api-key-here>
-```
-
-### 7. Telegram bot ไม่ตอบ
-
-**แก้ไข:**
-```bash
-# ตรวจสอบ gateway status
-# Linux
-systemctl --user status hermes-gateway
-
-# Windows
+### 4. Services not starting after reboot
+**Fix:** Check Task Scheduler and start manually if needed.
+```powershell
+# Check tasks
 schtasks /Query /TN "HermesGateway"
+schtasks /Query /TN "HermesDashboard"
 
-# เริ่ม gateway ใหม่
-hermes gateway start
+# Start manually
+schtasks /Run /TN "HermesGateway"
+schtasks /Run /TN "HermesDashboard"
 ```
 
-### 8. Dashboard เปิดไม่ได้
-
-**แก้ไข:**
-```bash
-# เริ่ม dashboard
-hermes dashboard start
-
-# ตรวจสอบ port
-# Linux
-ss -tlnp | grep 9119
-
-# Windows
-netstat -ano | findstr 9119
-```
+### 5. `API key invalid`
+**Fix:** Check `%LOCALAPPDATA%\hermes\.env` to ensure `LITELLM_API_KEY=` is present.
+See **Step 6: Change API Key After Installation** above.
 
 ---
 
-# 📋 Checklist
+## 📚 Additional Resources
 
-## หลังจบ Module นี้ ผู้เรียนควร:
-
-- [ ] รัน Quick Install Script สำเร็จ
-- [ ] สร้าง Telegram Bot Token ได้
-- [ ] วาง Token ตอนรันสคริปต์
-- [ ] ทดสอบ `hermes` CLI ได้
-- [ ] เปิด Dashboard ได้ (http://localhost:9119)
-- [ ] ทดสอบ Telegram bot ได้
-- [ ] เข้าใจว่าทุกอย่าง auto-start หลังรีสตาร์ท
-- [ ] เข้าใจวิธีใช้ `/model`, `/tools`, `/config`
+- **README.md** — Quick start guide
+- **INSTALLATION_GUIDE.md** — Detailed installation instructions
+- **TESTING_GUIDE.md** — Post-installation testing checklist
+- **ONE_LINE_COMMANDS.md** — Quick reference for commands
 
 ---
 
-# 🎯 Next Step
-
-## หลังจบ Module 2
-
-ไปต่อที่ **Lab 1: ทดสอบ Vision + Dashboard**
-
-**สิ่งที่ต้องทำ:**
-1. ทดสอบ `vision_analyze` กับภาพต่างๆ
-2. เปิดและใช้งาน Dashboard (http://localhost:9119)
-3. ส่งข้อความหา Telegram bot
-4. ทดสอบสลับ models ด้วย `/model`
-
----
-
-# 📚 เอกสารเพิ่มเติม
-
-## Links สำคัญ
-
-- **GitHub:** https://github.com/NousResearch/hermes-agent
-- **Documentation:** https://hermes-agent.nousresearch.com/docs
-- **LiteLLM Proxy:** https://litellm-proxy-gateway.pbseiyacpro7.workers.dev
-
-## Quick Install Scripts
-
-| ไฟล์ | ระบบปฏิบัติการ | วิธีใช้ |
-|------|----------------|---------|
-| `quick-install.sh` | Linux / macOS / WSL2 | `./quick-install.sh` |
-| `quick-install.ps1` | Windows (PowerShell) | `.\quick-install.ps1` |
-| `quick-install.bat` | Windows (CMD fallback) | `quick-install.bat` |
-
-## API Keys
-
-- **OpenRouter (Free):** https://openrouter.ai/keys
-- **LiteLLM:** ใช้ key ที่ให้ใน Course 0
-
----
-
-# จบ Module 2
-
-## 🎉 พร้อมทำ Lab 1!
-
-<div class="success">
-
-**ตอนนี้คุณมี:**
-
-- ✅ Hermes CLI ติดตั้งแล้ว (user-space)
-- ✅ LiteLLM Proxy + qwen3.7-plus
-- ✅ Telegram Bot พร้อมใช้
-- ✅ Dashboard ที่ http://localhost:9119
-- ✅ Auto-start หลังรีสตาร์ท
-- ✅ เข้าใจวิธีสลับ models
-
-</div>
-
-**ไปต่อที่ Lab 1: ทดสอบ Vision + Dashboard** 🚀
+**Created by:** Hermes Agent Training Team
+**Updated:** 2026-07-24
