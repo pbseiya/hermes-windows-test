@@ -26,7 +26,6 @@
 ### ไฟล์ประกอบ (ถ้าต้องการดู)
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `02-hermes-setup.html` | Slides แบบ HTML (เปิดใน browser) |
 | `02-hermes-setup.md` | Slides แบบ Markdown (source) |
 | `INSTALLATION_GUIDE.md` | คู่มือติดตั้งฉบับละเอียด |
 | `ONE_LINE_COMMANDS.md` | สรุปคำสั่ง one-liner |

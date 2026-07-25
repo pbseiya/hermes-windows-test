@@ -124,7 +124,7 @@ schtasks /Run /TN "HermesDashboard"
 | :--- | :--- |
 | `quick-install.ps1`, `quick-install.bat` | One-liner / double-click installation scripts |
 | `quick-uninstall.ps1` | One-liner uninstallation script |
-| `02-hermes-setup.html`, `02-hermes-setup.md` | Course 02 setup slides (HTML and Markdown source) |
+| `02-hermes-setup.md` | Course 02 setup slides (Markdown source) |
 | `INSTALLATION_GUIDE.md` | Comprehensive installation instructions |
 | `TESTING_GUIDE.md` | Post-installation testing procedures |
 | `ONE_LINE_COMMANDS.md` | Quick reference for one-liner commands |
