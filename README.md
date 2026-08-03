@@ -71,22 +71,17 @@ hermes chat -q "สวัสดี"   # Test
 
 ## 🛠️ Troubleshooting Guide
 
-### 1. Dashboard / Desktop Not Working
-*Cause: Antivirus blocked `npm` during installation.*
-Run the following commands to attempt recovery:
+### Dashboard/Desktop not working (antivirus blocked npm)
+1. Temporarily disable antivirus real-time protection
+2. Open PowerShell and run:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
-npm install --no-fund --no-audit
-npm install --workspace web --no-fund --no-audit
 npm run build -w web
 ```
-Then retry:
-```powershell
-hermes dashboard
-hermes desktop
-```
+3. Re-enable antivirus
+4. Run `hermes dashboard` or `hermes desktop`
 
-### 2. Telegram Bot Not Responding
+### Telegram Bot Not Responding
 Check the Python process, restart the gateway, and review the logs:
 ```powershell
 Get-Process -Name pythonw
@@ -94,7 +89,7 @@ hermes gateway start
 type %LOCALAPPDATA%\hermes\logs\gateway.log
 ```
 
-### 3. Services Not Starting After Reboot
+### Services Not Starting After Reboot
 Verify Task Scheduler tasks (primary auto-start method):
 ```powershell
 schtasks /Query /TN "HermesGateway"
@@ -108,7 +103,7 @@ schtasks /Run /TN "HermesDashboard"
 **Fallback:** If Task Scheduler is restricted, check the Windows Startup folder:
 *   **Startup Path:** `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
 
-### 4. `hermes` Command Not Recognized
+### `hermes` Command Not Recognized
 *Cause: PATH not loaded or incorrect path.*
 ```powershell
 # Open a new PowerShell window

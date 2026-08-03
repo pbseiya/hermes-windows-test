@@ -258,7 +258,6 @@ privacy:
 2. Run:
 ```powershell
 cd %LOCALAPPDATA%\hermes\hermes-agent
-npm install --no-fund --no-audit
 npm run build -w web
 ```
 3. Re-enable antivirus

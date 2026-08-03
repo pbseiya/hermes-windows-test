@@ -177,7 +177,7 @@ All tools are added to the User PATH automatically. **You must open a new PowerS
 | **`hermes: command not found`** | PATH not loaded. **Fix:** Open a new PowerShell window, or use full path: `& "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"` |
 | **`Execution Policy`** | PowerShell blocks scripts. **Fix:** `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
 | **`agy: command not found`** | PATH not loaded or not logged in. **Fix:** Open new PowerShell, then run `agy` to login with Google. |
-| **Dashboard/Desktop not working** | Antivirus blocked npm during install. **Fix:** Disable AV temporarily, run `npm install --no-fund --no-audit` and `npm run build -w web` in `%LOCALAPPDATA%\hermes\hermes-agent`, then re-enable AV. |
+| **Dashboard/Desktop not working** | Antivirus blocked npm during install. **Fix:** Disable AV temporarily, run `npm run build -w web` in `%LOCALAPPDATA%\hermes\hermes-agent`, then re-enable AV. |
 | **Telegram bot not responding** | Gateway not running. **Fix:** `hermes gateway start` or `schtasks /Run /TN "HermesGateway"` |
 | **Services not starting after reboot** | Task Scheduler tasks missing. **Fix:** `schtasks /Run /TN "HermesGateway"` and `schtasks /Run /TN "HermesDashboard"` |
 | **Download fails** | Internet/Proxy issue. **Fix:** Check connection or configure corporate proxy. |

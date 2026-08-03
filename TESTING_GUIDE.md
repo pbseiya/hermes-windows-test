@@ -163,8 +163,6 @@ $env:Path = "$env:USERPROFILE\.local\python;$env:Path"
 2. รันคำสั่ง:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
-npm install --no-fund --no-audit
-npm install --workspace web --no-fund --no-audit
 npm run build -w web
 ```
 3. เปิด Real-time protection กลับ

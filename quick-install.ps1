@@ -1084,9 +1084,8 @@ else {
     Write-Warn 'Dashboard needs additional setup (antivirus blocked npm during install)'
     Write-Host '  To enable dashboard:' -ForegroundColor Yellow
     Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
-    Write-Host '  2. Open PowerShell and run these commands one by one:' -ForegroundColor White
+    Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
     Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-    Write-Host '     npm install --workspace web --no-fund --no-audit' -ForegroundColor Yellow
     Write-Host '     npm run build -w web' -ForegroundColor Yellow
     Write-Host '  3. Re-enable antivirus' -ForegroundColor White
     Write-Host '  4. Run: hermes dashboard' -ForegroundColor White
