@@ -585,6 +585,10 @@ if (-not $SkipInstall) {
             }
         }
         if ($webOk) {
+            # Ensure TypeScript is installed in root (required for tsc command)
+            Write-Info 'Installing TypeScript compiler...'
+            cmd /c "npm.cmd install --no-save typescript 2>nul 1>nul"
+            
             Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
             cmd /c "npm.cmd run build -w web 2>nul"
             if ($LASTEXITCODE -eq 0) {
