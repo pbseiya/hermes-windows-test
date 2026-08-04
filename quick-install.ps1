@@ -370,78 +370,72 @@ if (-not $SkipInstall) {
         }
     }
     
-    # Use git clone method to get full installation with UI components
+    # Use download zip method (faster, avoids git fork bomb issues)
     $hermesInstallDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'
     
     Write-Info 'Installing hermes-agent with full UI support...'
     Write-Host ''
     
-    # Clone or update repository
+    # Remove existing installation if exists
     if (Test-Path $hermesInstallDir) {
-        Write-Info 'Updating existing hermes-agent repository...'
+        Write-Info 'Removing existing installation...'
         try {
-            Push-Location $hermesInstallDir
-            git pull origin main 2>&1 | Out-Null
-            Pop-Location
-            Write-Ok 'Repository updated'
+            # Kill any processes that might be holding files
+            Get-Process -Name 'hermes','Hermes','pythonw' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction Stop
+            Write-Ok 'Old installation removed'
         }
         catch {
-            Write-Warn 'Git pull failed -- Reinstalling...'
-            Pop-Location  # Make sure we're out of the directory
-            
-            # Kill any git processes that might be holding the directory
-            Get-Process git -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-
-            # Remove directory with retry (use robocopy for ALL node_modules)
-            $retryCount = 0
-            while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 5)) {
-                try {
-                    # Fast-delete all node_modules directories using robocopy trick
-                    $nodeModulesPaths = @(
-                        (Join-Path $hermesInstallDir 'node_modules'),
-                        (Join-Path $hermesInstallDir 'web\node_modules'),
-                        (Join-Path $hermesInstallDir 'apps\desktop\node_modules'),
-                        (Join-Path $hermesInstallDir 'ui-tui\node_modules')
-                    )
-                    $emptyDir = Join-Path $env:TEMP 'empty_dir_for_rmdir'
-                    if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
-                    foreach ($nm in $nodeModulesPaths) {
-                        if (Test-Path $nm) {
-                            cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>nul"
-                        }
-                    }
-                    Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
-                    Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction Stop
-                    break
-                }
-                catch {
-                    $retryCount++
-                    Start-Sleep -Seconds 3
-                }
-            }
-
-            # Verify directory is gone before cloning
-            if (Test-Path $hermesInstallDir) {
-                Write-Err "Cannot remove old hermes directory: $hermesInstallDir`nPlease close any running hermes processes and try again, or remove manually:`n  Remove-Item '$hermesInstallDir' -Recurse -Force"
-            }
-
-            git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
+            Write-Warn "Could not remove old installation: $_"
+            Write-Info 'Trying robocopy method...'
+            $emptyDir = Join-Path $env:TEMP 'empty_for_hermes'
+            if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
+            cmd /c "robocopy `"$emptyDir`" `"$hermesInstallDir`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>nul"
+            Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+            Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
-    else {
-        Write-Info 'Cloning hermes-agent repository...'
-        $hermesParentDir = Join-Path $env:LOCALAPPDATA 'hermes'
-        if (-not (Test-Path $hermesParentDir)) {
-            New-Item -ItemType Directory -Path $hermesParentDir -Force | Out-Null
+    
+    # Download latest release as zip
+    Write-Info 'Downloading hermes-agent repository...'
+    $zipUrl = 'https://github.com/NousResearch/hermes-agent/archive/refs/heads/main.zip'
+    $zipPath = Join-Path $env:TEMP 'hermes-agent-main.zip'
+    
+    try {
+        Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -TimeoutSec 300
+        Write-Ok 'Downloaded repository'
+        
+        # Extract zip
+        Write-Info 'Extracting repository...'
+        $extractDir = Join-Path $env:TEMP 'hermes-agent-extract'
+        if (Test-Path $extractDir) { Remove-Item $extractDir -Recurse -Force }
+        Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+        Remove-Item $zipPath -Force
+        
+        # Move to final location
+        $extractedFolder = Get-ChildItem -Path $extractDir -Directory | Select-Object -First 1
+        if ($extractedFolder) {
+            $hermesParentDir = Split-Path $hermesInstallDir -Parent
+            if (-not (Test-Path $hermesParentDir)) {
+                New-Item -ItemType Directory -Path $hermesParentDir -Force | Out-Null
+            }
+            Move-Item -Path $extractedFolder.FullName -Destination $hermesInstallDir -Force
+            Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
+            Write-Ok 'Repository extracted'
         }
-        git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
+        else {
+            Write-Err "Failed to extract repository - no folder found in zip"
+        }
+    }
+    catch {
+        Write-Err "Failed to download/extract repository: $_"
     }
 
-    # Validate clone succeeded
-    $gitDir = Join-Path $hermesInstallDir '.git'
-    if (-not (Test-Path $gitDir)) {
-        Write-Err "Git clone failed -- hermes-agent directory is not a valid repository.`nTry removing it manually: Remove-Item '$hermesInstallDir' -Recurse -Force`nThen run this script again."
+    # Validate download succeeded
+    $hermesCli = Join-Path $hermesInstallDir 'hermes_cli'
+    if (-not (Test-Path $hermesCli)) {
+        Write-Err "Download failed -- hermes_cli directory not found.`nTry removing manually: Remove-Item '$hermesInstallDir' -Recurse -Force`nThen run this script again."
     }
 
     # Create virtual environment and install
@@ -1070,7 +1064,7 @@ Write-Host 'Installed in user-space (No Admin required):' -ForegroundColor Cyan
 Write-Host '  - Node.js v22+ -> ~/.local/node/' -ForegroundColor White
 Write-Host '  - Python 3.11+ -> ~/.local/python/' -ForegroundColor White
 Write-Host '  - uv -> ~/.local/bin/' -ForegroundColor White
-Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (git clone)' -ForegroundColor White
+Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (downloaded)' -ForegroundColor White
 Write-Host '  - agy -> ~/AppData/Local/agy/bin/' -ForegroundColor White
 Write-Host ''
 Write-Host 'Configuration:' -ForegroundColor Cyan
