@@ -68,25 +68,41 @@ $startupDir = [System.Environment]::GetFolderPath('Startup')
 Get-ChildItem -Path $startupDir -Filter 'Hermes*' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 Write-Ok 'Startup shortcuts removed'
 
-# --- Step 4: Remove hermes installation (fast: robocopy all node_modules) ---
+# --- Step 4: Remove hermes installation (parallel fast delete) ---
 Write-Step 'Step 4: Remove hermes installation'
 
 $hermesDir = Join-Path $env:LOCALAPPDATA 'hermes'
 if (Test-Path $hermesDir) {
-    Write-Info 'Removing hermes (using fast delete)...'
+    Write-Info 'Removing hermes (using parallel fast delete)...'
 
-    # Fast-delete all node_modules directories (4 locations)
+    # Parallel delete all node_modules directories (4 locations)
     $nodeModulesPaths = @(
         (Join-Path $hermesDir 'hermes-agent\node_modules'),
         (Join-Path $hermesDir 'hermes-agent\web\node_modules'),
         (Join-Path $hermesDir 'hermes-agent\apps\desktop\node_modules'),
         (Join-Path $hermesDir 'hermes-agent\ui-tui\node_modules')
     )
+    
+    # Start parallel jobs for each node_modules
+    $jobs = @()
     foreach ($nm in $nodeModulesPaths) {
         if (Test-Path $nm) {
             Write-Info "  Cleaning: $($nm.Replace($hermesDir, ''))"
-            Remove-Fast -Path $nm
+            $jobs += Start-Job -ScriptBlock {
+                param($path, $tempDir)
+                if (-not (Test-Path $tempDir)) { 
+                    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null 
+                }
+                cmd /c "robocopy `"$tempDir`" `"$path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
+                Remove-Item $path -Force -Recurse -ErrorAction SilentlyContinue
+            } -ArgumentList $nm, (Join-Path $env:TEMP "empty_$([guid]::NewGuid().ToString('N').Substring(0,8))")
         }
+    }
+    
+    # Wait for all jobs to complete
+    if ($jobs.Count -gt 0) {
+        $jobs | Wait-Job | Out-Null
+        $jobs | Remove-Job -Force
     }
 
     # Now remove the entire hermes directory (much faster after node_modules cleared)
@@ -100,7 +116,7 @@ if (Test-Path $hermesDir) {
     Write-Info 'Hermes not found -- skipping'
 }
 
-# --- Step 5: Remove portable tools (fast: robocopy) ---
+# --- Step 5: Remove portable tools (parallel fast delete) ---
 Write-Step 'Step 5: Remove portable tools'
 
 $dirsToRemove = @(
@@ -111,16 +127,40 @@ $dirsToRemove = @(
     @{ Name = 'Antigravity (agy)'; Path = Join-Path $env:LOCALAPPDATA 'agy' }
 )
 
+# Start parallel jobs for all portable tools
+$jobs = @()
 foreach ($dir in $dirsToRemove) {
     if (Test-Path $dir.Path) {
-        Remove-Fast -Path $dir.Path
-        if (-not (Test-Path $dir.Path)) {
-            Write-Ok "$($dir.Name) removed"
-        } else {
-            Write-Warn "$($dir.Name) -- some files locked"
-        }
+        $jobs += Start-Job -ScriptBlock {
+            param($path, $name)
+            $emptyDir = Join-Path $env:TEMP "empty_$([guid]::NewGuid().ToString('N').Substring(0,8))"
+            if (-not (Test-Path $emptyDir)) { 
+                New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null 
+            }
+            cmd /c "robocopy `"$emptyDir`" `"$path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
+            Remove-Item $path -Force -Recurse -ErrorAction SilentlyContinue
+            Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path $path)) {
+                Write-Output "[OK] $name removed"
+            } else {
+                Write-Output "[!] $name -- some files locked"
+            }
+        } -ArgumentList $dir.Path, $dir.Name
     } else {
         Write-Info "$($dir.Name) not found -- skipping"
+    }
+}
+
+# Wait for all jobs and show results
+if ($jobs.Count -gt 0) {
+    $results = $jobs | Wait-Job | Receive-Job
+    $jobs | Remove-Job -Force
+    foreach ($result in $results) {
+        if ($result -like '[OK]*') {
+            Write-Host $result -ForegroundColor Green
+        } elseif ($result -like '[!]*') {
+            Write-Host $result -ForegroundColor Yellow
+        }
     }
 }
 
