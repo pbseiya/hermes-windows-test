@@ -135,9 +135,6 @@ if (-not $gitCmd) {
         Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
 
         Write-Ok 'Git Portable installed'
-
-        # Refresh PATH immediately so git is available in this session
-        $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
     }
     catch {
         Write-Err "Git download failed: $_`nPlease check your internet connection and try again."
@@ -146,6 +143,14 @@ if (-not $gitCmd) {
 else {
     $gitVer = (git --version) -replace 'git version ', ''
     Write-Ok "git $gitVer"
+}
+
+# Ensure git is in PATH (critical for git clone operations)
+$gitDir = Join-Path $env:USERPROFILE '.local\git'
+$gitBin = Join-Path $gitDir 'bin'
+$gitCmdDir = Join-Path $gitDir 'cmd'
+if (-not ($env:Path -like "*$gitBin*")) {
+    $env:Path = $gitBin + ';' + $gitCmdDir + ';' + $env:Path
 }
 
 # 1.4 Node.js v22+ (using nvm-windows or standalone)
