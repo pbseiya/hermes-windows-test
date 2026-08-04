@@ -14,12 +14,26 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 $ErrorActionPreference = 'Stop'
 
-# --- Helpers ---
+# --- Timing helpers ---
+$script:StartTime = Get-Date
+$script:StepStartTime = Get-Date
+
 function Write-Info    { param($msg) Write-Host '[INFO] ' -ForegroundColor Cyan -NoNewline; Write-Host $msg }
 function Write-Ok      { param($msg) Write-Host '[OK] ' -ForegroundColor Green -NoNewline; Write-Host $msg }
 function Write-Warn    { param($msg) Write-Host '[!] ' -ForegroundColor Yellow -NoNewline; Write-Host $msg }
 function Write-Err     { param($msg) Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
-function Write-Step    { param($msg) Write-Host ('`n=== {0} ===' -f $msg) -ForegroundColor Magenta }
+function Write-Step    { 
+    param($msg) 
+    $elapsed = (Get-Date) - $script:StepStartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host ('`n=== {0} === [{1}]' -f $msg, $elapsedStr) -ForegroundColor Magenta
+    $script:StepStartTime = Get-Date
+}
+function Write-Elapsed {
+    $elapsed = (Get-Date) - $script:StartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
+}
 
 # --- Python validation (Windows App Execution Alias detection) ---
 function Test-PythonValid {
@@ -1032,6 +1046,7 @@ Write-Host ''
 
 Write-Host ''
 Write-Host 'Ready to start Course 0: Hermes + AI Harness!' -ForegroundColor Green
+Write-Elapsed
 Write-Host ''
 
 # --- Prompt to continue ---
