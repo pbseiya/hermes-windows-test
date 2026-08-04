@@ -244,7 +244,7 @@ if (-not $pythonIsValid) {
         Expand-Archive -Path $pythonZip -DestinationPath $pythonDir -Force
         Remove-Item -Path $pythonZip -Force
 
-        # Enable pip by fixing python311._pth
+        # Enable import site by fixing python311._pth (required for uv)
         $pthFile = Join-Path $pythonDir 'python311._pth'
         if (Test-Path $pthFile) {
             $pthContent = Get-Content $pthFile
@@ -252,22 +252,11 @@ if (-not $pythonIsValid) {
             [System.IO.File]::WriteAllText($pthFile, ($pthContent -join "`r`n"))
         }
 
-        # Install pip
-        $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
-        $getPipFile = Join-Path $pythonDir 'get-pip.py'
-        # Delete existing file first (may be locked from previous install)
-        Remove-Item $getPipFile -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 500
-        Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
-
-        $pythonExe = Join-Path $pythonDir 'python.exe'
-        Start-Process -FilePath $pythonExe -ArgumentList $getPipFile -Wait -NoNewWindow
-
-        $pythonScriptsDir = Join-Path $pythonDir 'Scripts'
-        $env:Path = $pythonDir + ';' + $pythonScriptsDir + ';' + $env:Path
+        # Add Python to PATH (no pip needed - uv handles dependencies)
+        $env:Path = $pythonDir + ';' + $env:Path
         $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
         if ($userPath -notlike "*$pythonDir*") {
-            [System.Environment]::SetEnvironmentVariable('Path', ($pythonDir + ';' + $pythonScriptsDir + ';' + $userPath), 'User')
+            [System.Environment]::SetEnvironmentVariable('Path', ($pythonDir + ';' + $userPath), 'User')
         }
 
         Write-Ok 'Python embeddable installed'
@@ -293,39 +282,6 @@ if ($pythonIsValid) {
         Write-Err "Python must be 3.10 or higher (current: $pythonVer)"
     }
     Write-Ok "Python $pythonVer"
-
-    # 1.7 pip
-    $pipCmd = Get-Command pip -ErrorAction SilentlyContinue
-    if (-not $pipCmd) {
-        $pipCmd = Get-Command pip3 -ErrorAction SilentlyContinue
-    }
-
-    if ($pipCmd) {
-        $pipVer = (pip --version 2>&1) -replace 'pip ', '' -replace ' from .*', ''
-        Write-Ok "pip $pipVer"
-    }
-    else {
-        Write-Warn 'pip not found -- Installing via get-pip.py...'
-        # Find python directory from current python executable
-        $currentPython = (Get-Command python -ErrorAction SilentlyContinue).Source
-        if (-not $currentPython) {
-            $currentPython = (Get-Command python3 -ErrorAction SilentlyContinue).Source
-        }
-        $pythonDir = Split-Path $currentPython -Parent
-        $pythonExe = $currentPython
-
-        $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
-        $getPipFile = Join-Path $pythonDir 'get-pip.py'
-        # Delete existing file first (may be locked from previous install)
-        Remove-Item $getPipFile -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 500
-        Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
-        $prevEAP = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
-        & $pythonExe $getPipFile 2>&1 | Out-Null
-        $ErrorActionPreference = $prevEAP
-        Write-Ok 'pip installed'
-    }
 }
 else {
     Write-Err 'Python installation failed'
