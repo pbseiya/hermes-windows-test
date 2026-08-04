@@ -531,7 +531,17 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
-        # Build web UI for dashboard (only step needed for dashboard to work)
+        # Install dependencies first (required for build)
+        Write-Info 'Installing Node.js dependencies (this may take 2-3 minutes)...'
+        cmd /c "npm.cmd install --no-fund --no-audit"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warn 'npm install had issues -- continuing anyway...'
+        }
+        else {
+            Write-Ok 'Dependencies installed'
+        }
+
+        # Build web UI for dashboard
         Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
         cmd /c "npm.cmd run build -w web"
         if ($LASTEXITCODE -eq 0) {
@@ -542,9 +552,12 @@ if (-not $SkipInstall) {
             Write-Warn 'Dashboard web UI build failed'
             Write-Host ''
             Write-Host '  To enable dashboard later:' -ForegroundColor Yellow
-            Write-Host '  Open PowerShell and run:' -ForegroundColor White
+            Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
+            Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
             Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
+            Write-Host '     npm install' -ForegroundColor Yellow
             Write-Host '     npm run build -w web' -ForegroundColor Yellow
+            Write-Host '  3. Re-enable antivirus' -ForegroundColor White
         }
 
         Pop-Location
