@@ -14,26 +14,12 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 $ErrorActionPreference = 'Stop'
 
-# --- Timing helpers ---
-$script:StartTime = Get-Date
-$script:StepStartTime = Get-Date
-
+# --- Helpers ---
 function Write-Info    { param($msg) Write-Host '[INFO] ' -ForegroundColor Cyan -NoNewline; Write-Host $msg }
 function Write-Ok      { param($msg) Write-Host '[OK] ' -ForegroundColor Green -NoNewline; Write-Host $msg }
 function Write-Warn    { param($msg) Write-Host '[!] ' -ForegroundColor Yellow -NoNewline; Write-Host $msg }
 function Write-Err     { param($msg) Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
-function Write-Step    { 
-    param($msg) 
-    $elapsed = (Get-Date) - $script:StepStartTime
-    $elapsedStr = '{0:mm\:ss}' -f $elapsed
-    Write-Host ('`n=== {0} === [{1}]' -f $msg, $elapsedStr) -ForegroundColor Magenta
-    $script:StepStartTime = Get-Date
-}
-function Write-Elapsed {
-    $elapsed = (Get-Date) - $script:StartTime
-    $elapsedStr = '{0:mm\:ss}' -f $elapsed
-    Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
-}
+function Write-Step    { param($msg) Write-Host ('`n=== {0} ===' -f $msg) -ForegroundColor Magenta }
 
 # --- Python validation (Windows App Execution Alias detection) ---
 function Test-PythonValid {
@@ -149,7 +135,6 @@ if (-not $gitCmd) {
         Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
 
         Write-Ok 'Git Portable installed'
-        Write-Elapsed
 
         # Refresh PATH immediately so git is available in this session
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -176,7 +161,7 @@ if (-not $nodeCmd) {
     $nodeDir = Join-Path $env:USERPROFILE '.local\node'
     if (-not (Test-Path $nodeDir)) { New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null }
 
-    $nodeUrl = 'https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip'
+    $nodeUrl = 'https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip'
     $nodeZip = Join-Path $nodeDir 'node.zip'
 
     Write-Info 'Downloading Node.js v22 portable (this may take 2-3 minutes)...'
@@ -203,8 +188,7 @@ if (-not $nodeCmd) {
             [System.Environment]::SetEnvironmentVariable('Path', ($nodeDir + ';' + $userPath), 'User')
         }
 
-        Write-Ok 'Node.js v22.22 portable installed'
-        Write-Elapsed
+        Write-Ok 'Node.js v22 portable installed'
     }
     catch {
         Write-Err "Node.js installation failed: $_`nPlease check your internet connection and try again."
@@ -287,7 +271,6 @@ if (-not $pythonIsValid) {
         }
 
         Write-Ok 'Python embeddable installed'
-        Write-Elapsed
     }
     catch {
         Write-Err "Python installation failed: $_`nPlease check your internet connection and try again.`nOr download manually from: https://python.org/downloads/"
@@ -310,7 +293,6 @@ if ($pythonIsValid) {
         Write-Err "Python must be 3.10 or higher (current: $pythonVer)"
     }
     Write-Ok "Python $pythonVer"
-    Write-Elapsed
 
     # 1.7 pip
     $pipCmd = Get-Command pip -ErrorAction SilentlyContinue
@@ -531,21 +513,140 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
-        # Build web UI for dashboard directly (no npm install needed - dependencies already installed by npm run)
-        Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
-        cmd /c "npm.cmd run build -w web"
-        if ($LASTEXITCODE -eq 0) {
-            Write-Ok 'Dashboard web UI built -- ready to use immediately'
-            Write-Elapsed
+        # Install Node.js dependencies (required for dashboard, desktop, TUI)
+        Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
+        Write-Info 'This may take 10-20 minutes on first run...'
+
+        # Helper: npm install with retry (handles antivirus file locking)
+        function Invoke-NpmWithRetry {
+            param([string]$Command, [int]$MaxRetries = 3)
+            $nodeModules = Join-Path $hermesInstallDir 'node_modules'
+            for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
+                Write-Info "  Attempt $attempt of $MaxRetries..."
+                cmd /c "$Command 2>nul 1>nul"
+                if ($LASTEXITCODE -eq 0) { return $true }
+                if ($attempt -lt $MaxRetries) {
+                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in 10 seconds..."
+                    Start-Sleep -Seconds 10
+                    # Clean corrupted node_modules before retry
+                    if (Test-Path $nodeModules) {
+                        Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
+                        Start-Sleep -Seconds 5
+                    }
+                }
+            }
+            return $false
+        }
+
+        # Use npm install with --ignore-scripts to bypass antivirus file locking
+        # Postinstall scripts (electron download, etc.) will be run separately
+        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
+        if (-not $npmOk) {
+            Write-Warn 'npm install failed -- Falling back to npm ci...'
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
+        }
+        if ($npmOk) {
+            Write-Ok 'Node.js dependencies installed'
         }
         else {
-            Write-Warn 'Dashboard web UI build failed'
-            Write-Host ''
-            Write-Host '  To enable dashboard later:' -ForegroundColor Yellow
-            Write-Host '  Open PowerShell and run:' -ForegroundColor White
-            Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-            Write-Host '     npm run build -w web' -ForegroundColor Yellow
+            Write-Warn 'Node.js dependencies install had issues'
         }
+
+        # Download Electron binary separately (postinstall script)
+        Write-Info 'Downloading Electron binary...'
+        $electronInstall = Join-Path $hermesInstallDir 'node_modules\electron\install.js'
+        if (Test-Path $electronInstall) {
+            cmd /c "node `"$electronInstall`" 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok 'Electron binary downloaded'
+            }
+            else {
+                Write-Warn 'Electron download failed -- desktop may not work'
+            }
+        }
+
+        # Build web UI for dashboard (so it works immediately without rebuilding)
+        Write-Info 'Installing web workspace dependencies...'
+        $webOk = $false
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  Web install attempt $attempt/5..."
+            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s for antivirus to release files..."
+                Start-Sleep -Seconds $delay
+                $webNm = Join-Path $hermesInstallDir 'web\node_modules'
+                if (Test-Path $webNm) {
+                    Remove-Item $webNm -Recurse -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 5
+                }
+            }
+        }
+        if ($webOk) {
+            Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
+            cmd /c "npm.cmd run build -w web 2>nul"
+            if ($LASTEXITCODE -eq 0) {
+                Write-Ok 'Dashboard web UI built -- ready to use immediately'
+            }
+            else {
+                Write-Warn 'Dashboard web UI build failed -- will build on first launch'
+            }
+        }
+        else {
+            Write-Warn 'Web workspace install failed after 5 attempts'
+        }
+
+        # Install TUI workspace (required for embedded terminal in dashboard)
+        Write-Info 'Installing TUI workspace (for embedded terminal)...'
+        $tuiOk = $false
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  TUI install attempt $attempt/5..."
+            cmd /c "npm.cmd install --workspace ui-tui --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) { $tuiOk = $true; break }
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s..."
+                Start-Sleep -Seconds $delay
+                $tuiNm = Join-Path $hermesInstallDir 'ui-tui\node_modules'
+                if (Test-Path $tuiNm) {
+                    Remove-Item $tuiNm -Recurse -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 5
+                }
+            }
+        }
+        if ($tuiOk) {
+            Write-Ok 'TUI workspace installed -- dashboard terminal will work'
+        }
+        else {
+            Write-Warn 'TUI workspace install failed -- dashboard chat may not work'
+        }
+
+        # Pre-build desktop (Electron) so hermes desktop launches immediately
+        Write-Info 'Pre-building desktop app (this may take 3-5 minutes)...'
+        Push-Location (Join-Path $hermesInstallDir 'apps\desktop')
+        $desktopNm = Join-Path (Get-Location) 'node_modules'
+        $desktopOk = $false
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  Desktop build attempt $attempt/5..."
+            cmd /c "npm.cmd install --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
+            cmd /c "npm.cmd run build 2>nul"
+            if ($LASTEXITCODE -eq 0) { $desktopOk = $true; break }
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s for antivirus..."
+                Start-Sleep -Seconds $delay
+                if (Test-Path $desktopNm) { Remove-Item $desktopNm -Recurse -Force -ErrorAction SilentlyContinue }
+            }
+        }
+        if ($desktopOk) {
+            Write-Ok 'Desktop app built -- hermes desktop will launch immediately'
+        }
+        else {
+            Write-Warn 'Desktop pre-build skipped -- will build on first launch'
+        }
+        Pop-Location
 
         Pop-Location
         
@@ -939,13 +1040,8 @@ else {
     $env:VIRTUAL_ENV = Join-Path $hermesInstallDir 'venv'
     $venvLib = Join-Path $hermesInstallDir 'venv\Lib\site-packages'
     $env:PYTHONPATH = "$hermesInstallDir;$venvLib"
-    
-    # Use pythonw.exe for background process (no console window)
-    $venvPythonwPath = Join-Path $venvScripts 'pythonw.exe'
-    Start-Process -FilePath $venvPythonwPath -ArgumentList '-m', 'hermes_cli.main', 'gateway', 'run' -WindowStyle Hidden
+    Start-Process -FilePath $venvPythonPath -ArgumentList '-m', 'hermes_cli.main', 'gateway', 'run' -WindowStyle Hidden
     Start-Sleep -Seconds 10
-    
-    # Check if gateway process is running
     $gwProcess = Get-Process -Name 'pythonw' -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*hermes*' }
     if ($gwProcess) {
         Write-Ok 'Telegram Gateway started'
@@ -1006,7 +1102,7 @@ Write-Host '                  Installation Complete!                    ' -Foreg
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host ''
 Write-Host 'Installed in user-space (No Admin required):' -ForegroundColor Cyan
-Write-Host '  - Node.js v22.22+ -> ~/.local/node/' -ForegroundColor White
+Write-Host '  - Node.js v22+ -> ~/.local/node/' -ForegroundColor White
 Write-Host '  - Python 3.11+ -> ~/.local/python/' -ForegroundColor White
 Write-Host '  - uv -> ~/.local/bin/' -ForegroundColor White
 Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (git clone)' -ForegroundColor White
@@ -1040,16 +1136,19 @@ Write-Host '  hermes dashboard                Open web dashboard' -ForegroundCol
 Write-Host '  hermes desktop                  Open desktop app' -ForegroundColor Yellow
 Write-Host ''
 
-Write-Host 'If dashboard/desktop fails:' -ForegroundColor Cyan
-Write-Host '  Open PowerShell and run:' -ForegroundColor White
+Write-Host 'If dashboard/desktop fails (antivirus issue):' -ForegroundColor Cyan
+Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
+Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
 Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
+Write-Host '     npm install --no-fund --no-audit' -ForegroundColor Yellow
+Write-Host '     npm install --workspace web --no-fund --no-audit' -ForegroundColor Yellow
 Write-Host '     npm run build -w web' -ForegroundColor Yellow
-Write-Host '  Then try hermes dashboard / hermes desktop again' -ForegroundColor White
+Write-Host '  3. Re-enable antivirus' -ForegroundColor White
+Write-Host '  4. Try hermes dashboard / hermes desktop again' -ForegroundColor White
 Write-Host ''
 
 Write-Host ''
 Write-Host 'Ready to start Course 0: Hermes + AI Harness!' -ForegroundColor Green
-Write-Elapsed
 Write-Host ''
 
 # --- Prompt to continue ---
