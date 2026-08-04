@@ -301,8 +301,16 @@ if ($pythonIsValid) {
     }
 
     if ($pipCmd) {
-        $pipVer = (pip --version 2>&1) -replace 'pip ', '' -replace ' from .*', ''
-        Write-Ok "pip $pipVer"
+        try {
+            $prevEAP = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            $pipVer = (pip --version 2>&1) -replace 'pip ', '' -replace ' from .*', ''
+            $ErrorActionPreference = $prevEAP
+            Write-Ok "pip $pipVer"
+        }
+        catch {
+            Write-Warn 'pip is blocked by antivirus -- Will continue without version check'
+        }
     }
     else {
         Write-Warn 'pip not found -- Installing via get-pip.py...'
