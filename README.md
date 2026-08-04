@@ -22,7 +22,21 @@ This repository provides automated installation scripts, guides, and course mate
 ## ⚙️ Installation & Uninstallation
 
 *   **Environment:** All installation commands must be run in **PowerShell**.
-*   **Uninstall Time:** Takes ~2-3 minutes (utilizes fast `robocopy`-based deletion for all `node_modules`).
+*   **Uninstall Time:** Takes ~2-3 minutes (utilizes parallel fast deletion for all `node_modules`).
+
+### Viewing Long Logs
+
+If the installation/uninstallation log is too long to scroll:
+
+**Option 1: Increase Console Buffer**
+```powershell
+$host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size 120,9999
+```
+
+**Option 2: Save to File**
+```powershell
+irm ... | iex | Tee-Object -FilePath install.log
+```
 
 ### ⚠️ CRITICAL: Antivirus Warning
 **You must temporarily disable your antivirus during installation** to ensure full functionality of the Dashboard and Desktop features.
