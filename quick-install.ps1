@@ -531,17 +531,7 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
-        # Install web workspace dependencies only (faster, less AV blocking)
-        Write-Info 'Installing web workspace dependencies (this may take 1-2 minutes)...'
-        cmd /c "npm.cmd install --workspace web --no-fund --no-audit"
-        if ($LASTEXITCODE -eq 0) {
-            Write-Ok 'Web dependencies installed'
-        }
-        else {
-            Write-Warn 'Web dependencies installation had issues'
-        }
-
-        # Build web UI for dashboard
+        # Build web UI for dashboard directly (no npm install needed - dependencies already installed by npm run)
         Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
         cmd /c "npm.cmd run build -w web"
         if ($LASTEXITCODE -eq 0) {
@@ -552,12 +542,9 @@ if (-not $SkipInstall) {
             Write-Warn 'Dashboard web UI build failed'
             Write-Host ''
             Write-Host '  To enable dashboard later:' -ForegroundColor Yellow
-            Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
-            Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
+            Write-Host '  Open PowerShell and run:' -ForegroundColor White
             Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-            Write-Host '     npm install' -ForegroundColor Yellow
             Write-Host '     npm run build -w web' -ForegroundColor Yellow
-            Write-Host '  3. Re-enable antivirus' -ForegroundColor White
         }
 
         Pop-Location
@@ -1053,13 +1040,11 @@ Write-Host '  hermes dashboard                Open web dashboard' -ForegroundCol
 Write-Host '  hermes desktop                  Open desktop app' -ForegroundColor Yellow
 Write-Host ''
 
-Write-Host 'If dashboard/desktop fails (antivirus issue):' -ForegroundColor Cyan
-Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
-Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
+Write-Host 'If dashboard/desktop fails:' -ForegroundColor Cyan
+Write-Host '  Open PowerShell and run:' -ForegroundColor White
 Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
 Write-Host '     npm run build -w web' -ForegroundColor Yellow
-Write-Host '  3. Re-enable antivirus' -ForegroundColor White
-Write-Host '  4. Try hermes dashboard / hermes desktop again' -ForegroundColor White
+Write-Host '  Then try hermes dashboard / hermes desktop again' -ForegroundColor White
 Write-Host ''
 
 Write-Host ''
