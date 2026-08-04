@@ -464,7 +464,7 @@ if (-not $SkipInstall) {
                 Write-Err "Cannot remove old hermes directory: $hermesInstallDir`nPlease close any running hermes processes and try again, or remove manually:`n  Remove-Item '$hermesInstallDir' -Recurse -Force"
             }
 
-            git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
+            git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir 2>$null
         }
     }
     else {
@@ -473,7 +473,7 @@ if (-not $SkipInstall) {
         if (-not (Test-Path $hermesParentDir)) {
             New-Item -ItemType Directory -Path $hermesParentDir -Force | Out-Null
         }
-        git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
+        git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir 2>$null
     }
 
     # Validate clone succeeded
