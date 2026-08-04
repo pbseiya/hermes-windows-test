@@ -458,8 +458,27 @@ if (-not $SkipInstall) {
         # Use --link-mode=copy to avoid uv trampoline .exe files that antivirus blocks
         Write-Info 'Installing hermes-agent Python packages...'
         $env:UV_LINK_MODE = 'copy'
-        uv pip install -e '.[all]' --link-mode=copy --quiet
-        Write-Ok 'Python packages installed'
+        
+        # Retry uv pip install up to 3 times (antivirus may block trampoline creation)
+        $uvOk = $false
+        for ($uvAttempt = 1; $uvAttempt -le 3; $uvAttempt++) {
+            Write-Info "  uv pip install attempt $uvAttempt/3..."
+            uv pip install -e '.[all]' --link-mode=copy --quiet 2>&1 | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                $uvOk = $true
+                break
+            }
+            if ($uvAttempt -lt 3) {
+                Write-Warn "  Failed -- waiting 10s before retry..."
+                Start-Sleep -Seconds 10
+            }
+        }
+        
+        if ($uvOk) {
+            Write-Ok 'Python packages installed'
+        } else {
+            Write-Warn 'Python packages install had issues -- hermes may not work'
+        }
 
         # Configure npm for corporate environments (antivirus-friendly)
         Write-Info 'Configuring npm for corporate environment...'
