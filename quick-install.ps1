@@ -149,6 +149,7 @@ if (-not $gitCmd) {
         Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
 
         Write-Ok 'Git Portable installed'
+        Write-Elapsed
 
         # Refresh PATH immediately so git is available in this session
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -202,7 +203,8 @@ if (-not $nodeCmd) {
             [System.Environment]::SetEnvironmentVariable('Path', ($nodeDir + ';' + $userPath), 'User')
         }
 
-        Write-Ok 'Node.js v22 portable installed'
+        Write-Ok 'Node.js v22.22 portable installed'
+        Write-Elapsed
     }
     catch {
         Write-Err "Node.js installation failed: $_`nPlease check your internet connection and try again."
@@ -285,6 +287,7 @@ if (-not $pythonIsValid) {
         }
 
         Write-Ok 'Python embeddable installed'
+        Write-Elapsed
     }
     catch {
         Write-Err "Python installation failed: $_`nPlease check your internet connection and try again.`nOr download manually from: https://python.org/downloads/"
@@ -307,6 +310,7 @@ if ($pythonIsValid) {
         Write-Err "Python must be 3.10 or higher (current: $pythonVer)"
     }
     Write-Ok "Python $pythonVer"
+    Write-Elapsed
 
     # 1.7 pip
     $pipCmd = Get-Command pip -ErrorAction SilentlyContinue
@@ -532,6 +536,7 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd run build -w web"
         if ($LASTEXITCODE -eq 0) {
             Write-Ok 'Dashboard web UI built -- ready to use immediately'
+            Write-Elapsed
         }
         else {
             Write-Warn 'Dashboard web UI build failed'
