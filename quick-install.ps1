@@ -538,13 +538,12 @@ if (-not $SkipInstall) {
             return $false
         }
 
-        # Use npm install with --ignore-scripts to bypass antivirus file locking
-        # Postinstall scripts (electron download, etc.) will be run separately
-        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
-        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
+        # Install Node.js dependencies without --ignore-scripts to ensure completeness
+        Write-Info 'Installing Node.js dependencies...'
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit'
         if (-not $npmOk) {
             Write-Warn 'npm install failed -- Falling back to npm ci...'
-            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit'
         }
         if ($npmOk) {
             Write-Ok 'Node.js dependencies installed'
