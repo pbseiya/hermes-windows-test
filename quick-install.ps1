@@ -515,7 +515,7 @@ if (-not $SkipInstall) {
 
         # Build web UI for dashboard (only step needed for dashboard to work)
         Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
-        cmd /c "npm.cmd run build -w web 2>nul"
+        cmd /c "npm.cmd run build -w web"
         if ($LASTEXITCODE -eq 0) {
             Write-Ok 'Dashboard web UI built -- ready to use immediately'
         }
@@ -523,12 +523,9 @@ if (-not $SkipInstall) {
             Write-Warn 'Dashboard web UI build failed'
             Write-Host ''
             Write-Host '  To enable dashboard later:' -ForegroundColor Yellow
-            Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
-            Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
+            Write-Host '  Open PowerShell and run:' -ForegroundColor White
             Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-            Write-Host '     npm install --workspace web' -ForegroundColor Yellow
             Write-Host '     npm run build -w web' -ForegroundColor Yellow
-            Write-Host '  3. Re-enable antivirus' -ForegroundColor White
         }
 
         Pop-Location
