@@ -6,10 +6,25 @@
 
 $ErrorActionPreference = 'Continue'
 
+# --- Timing helpers ---
+$script:StartTime = Get-Date
+$script:StepStartTime = Get-Date
+
 function Write-Ok   { param($msg) Write-Host "[OK] $msg" -ForegroundColor Green }
 function Write-Info  { param($msg) Write-Host "[INFO] $msg" -ForegroundColor Cyan }
 function Write-Warn  { param($msg) Write-Host "[!] $msg" -ForegroundColor Yellow }
-function Write-Step  { param($msg) Write-Host ("`n=== {0} ===" -f $msg) -ForegroundColor Magenta }
+function Write-Step  { 
+    param($msg) 
+    $elapsed = (Get-Date) - $script:StepStartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host ("`n=== {0} === [{1}]" -f $msg, $elapsedStr) -ForegroundColor Magenta
+    $script:StepStartTime = Get-Date
+}
+function Write-Elapsed {
+    $elapsed = (Get-Date) - $script:StartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
+}
 
 # Helper: Fast directory removal using robocopy trick
 function Remove-Fast {
@@ -158,6 +173,7 @@ Write-Host ''
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host '                 Uninstall Complete!                        ' -ForegroundColor Green
 Write-Host '============================================================' -ForegroundColor Green
+Write-Elapsed
 Write-Host ''
 Write-Host 'Removed:' -ForegroundColor Cyan
 Write-Host '  - Hermes Agent + all data' -ForegroundColor White
