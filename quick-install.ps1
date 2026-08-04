@@ -532,13 +532,27 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
         # Install dependencies first (required for build)
+        # Use --ignore-scripts to reduce antivirus blocking during install
         Write-Info 'Installing Node.js dependencies (this may take 2-3 minutes)...'
-        cmd /c "npm.cmd install --no-fund --no-audit"
+        cmd /c "npm.cmd install --no-fund --no-audit --ignore-scripts"
         if ($LASTEXITCODE -ne 0) {
-            Write-Warn 'npm install had issues -- continuing anyway...'
+            Write-Warn 'npm install had issues (antivirus may be blocking) -- will retry...'
+            # Wait for antivirus to release files
+            Start-Sleep -Seconds 10
+            # Try again with clean
+            cmd /c "npm.cmd cache clean --force"
+            cmd /c "npm.cmd install --no-fund --no-audit --ignore-scripts"
+        }
+        
+        # Now run postinstall scripts separately
+        Write-Info 'Running postinstall scripts...'
+        cmd /c "npm.cmd run postinstall"
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok 'Dependencies installed'
         }
         else {
-            Write-Ok 'Dependencies installed'
+            Write-Warn 'Dependencies installation incomplete (antivirus may be blocking)'
         }
 
         # Build web UI for dashboard
