@@ -71,15 +71,13 @@ hermes chat -q "สวัสดี"   # Test
 
 ## 🛠️ Troubleshooting Guide
 
-### Dashboard/Desktop not working (antivirus blocked npm)
-1. Temporarily disable antivirus real-time protection
-2. Open PowerShell and run:
+### Dashboard/Desktop not working
+Open PowerShell and run:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
 npm run build -w web
 ```
-3. Re-enable antivirus
-4. Run `hermes dashboard` or `hermes desktop`
+Then run `hermes dashboard` or `hermes desktop` again
 
 ### Telegram Bot Not Responding
 Check the Python process, restart the gateway, and review the logs:

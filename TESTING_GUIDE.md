@@ -159,14 +159,12 @@ $env:Path = "$env:USERPROFILE\.local\python;$env:Path"
 **สาเหตุ:** Antivirus บล็อก npm ตอนติดตั้ง
 
 **วิธีแก้:**
-1. ปิด Real-time protection ชั่วคราว
-2. รันคำสั่ง:
+รันคำสั่ง:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
 npm run build -w web
 ```
-3. เปิด Real-time protection กลับ
-4. รัน `hermes dashboard` หรือ `hermes desktop`
+แล้วรัน `hermes dashboard` หรือ `hermes desktop` อีกครั้ง
 
 ### 7. Telegram Bot ไม่ตอบกลับ
 ```powershell

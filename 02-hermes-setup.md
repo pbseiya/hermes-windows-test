@@ -254,14 +254,12 @@ privacy:
 **Cause:** Antivirus blocked npm during installation
 
 **Solution:**
-1. Disable antivirus temporarily
-2. Run:
+Run:
 ```powershell
 cd %LOCALAPPDATA%\hermes\hermes-agent
 npm run build -w web
 ```
-3. Re-enable antivirus
-4. Restart: `hermes dashboard`
+Then restart: `hermes dashboard`
 
 ### Problem 3: Telegram Bot Not Responding
 
