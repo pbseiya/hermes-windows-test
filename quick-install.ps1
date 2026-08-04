@@ -519,15 +519,16 @@ if (-not $SkipInstall) {
 
         # Helper: npm install with retry (handles antivirus file locking)
         function Invoke-NpmWithRetry {
-            param([string]$Command, [int]$MaxRetries = 3)
+            param([string]$Command, [int]$MaxRetries = 5)
             $nodeModules = Join-Path $hermesInstallDir 'node_modules'
             for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
                 Write-Info "  Attempt $attempt of $MaxRetries..."
                 cmd /c "$Command 2>nul 1>nul"
                 if ($LASTEXITCODE -eq 0) { return $true }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in 10 seconds..."
-                    Start-Sleep -Seconds 10
+                    $delay = $attempt * 15
+                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in $delay seconds..."
+                    Start-Sleep -Seconds $delay
                     # Clean corrupted node_modules before retry
                     if (Test-Path $nodeModules) {
                         Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
