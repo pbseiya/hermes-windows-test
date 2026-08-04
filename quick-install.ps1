@@ -513,140 +513,23 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
-        # Install Node.js dependencies (required for dashboard, desktop, TUI)
-        Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
-        Write-Info 'This may take 10-20 minutes on first run...'
-
-        # Helper: npm install with retry (handles antivirus file locking)
-        function Invoke-NpmWithRetry {
-            param([string]$Command, [int]$MaxRetries = 3)
-            $nodeModules = Join-Path $hermesInstallDir 'node_modules'
-            for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
-                Write-Info "  Attempt $attempt of $MaxRetries..."
-                cmd /c "$Command 2>nul 1>nul"
-                if ($LASTEXITCODE -eq 0) { return $true }
-                if ($attempt -lt $MaxRetries) {
-                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in 10 seconds..."
-                    Start-Sleep -Seconds 10
-                    # Clean corrupted node_modules before retry
-                    if (Test-Path $nodeModules) {
-                        Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
-                        Start-Sleep -Seconds 5
-                    }
-                }
-            }
-            return $false
-        }
-
-        # Use npm install with --ignore-scripts to bypass antivirus file locking
-        # Postinstall scripts (electron download, etc.) will be run separately
-        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
-        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
-        if (-not $npmOk) {
-            Write-Warn 'npm install failed -- Falling back to npm ci...'
-            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
-        }
-        if ($npmOk) {
-            Write-Ok 'Node.js dependencies installed'
+        # Build web UI for dashboard (only step needed for dashboard to work)
+        Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
+        cmd /c "npm.cmd run build -w web 2>nul"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Ok 'Dashboard web UI built -- ready to use immediately'
         }
         else {
-            Write-Warn 'Node.js dependencies install had issues'
+            Write-Warn 'Dashboard web UI build failed'
+            Write-Host ''
+            Write-Host '  To enable dashboard later:' -ForegroundColor Yellow
+            Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
+            Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
+            Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
+            Write-Host '     npm install --workspace web' -ForegroundColor Yellow
+            Write-Host '     npm run build -w web' -ForegroundColor Yellow
+            Write-Host '  3. Re-enable antivirus' -ForegroundColor White
         }
-
-        # Download Electron binary separately (postinstall script)
-        Write-Info 'Downloading Electron binary...'
-        $electronInstall = Join-Path $hermesInstallDir 'node_modules\electron\install.js'
-        if (Test-Path $electronInstall) {
-            cmd /c "node `"$electronInstall`" 2>nul 1>nul"
-            if ($LASTEXITCODE -eq 0) {
-                Write-Ok 'Electron binary downloaded'
-            }
-            else {
-                Write-Warn 'Electron download failed -- desktop may not work'
-            }
-        }
-
-        # Build web UI for dashboard (so it works immediately without rebuilding)
-        Write-Info 'Installing web workspace dependencies...'
-        $webOk = $false
-        for ($attempt = 1; $attempt -le 5; $attempt++) {
-            Write-Info "  Web install attempt $attempt/5..."
-            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
-            if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
-            if ($attempt -lt 5) {
-                $delay = $attempt * 15
-                Write-Warn "  Failed -- waiting ${delay}s for antivirus to release files..."
-                Start-Sleep -Seconds $delay
-                $webNm = Join-Path $hermesInstallDir 'web\node_modules'
-                if (Test-Path $webNm) {
-                    Remove-Item $webNm -Recurse -Force -ErrorAction SilentlyContinue
-                    Start-Sleep -Seconds 5
-                }
-            }
-        }
-        if ($webOk) {
-            Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
-            cmd /c "npm.cmd run build -w web 2>nul"
-            if ($LASTEXITCODE -eq 0) {
-                Write-Ok 'Dashboard web UI built -- ready to use immediately'
-            }
-            else {
-                Write-Warn 'Dashboard web UI build failed -- will build on first launch'
-            }
-        }
-        else {
-            Write-Warn 'Web workspace install failed after 5 attempts'
-        }
-
-        # Install TUI workspace (required for embedded terminal in dashboard)
-        Write-Info 'Installing TUI workspace (for embedded terminal)...'
-        $tuiOk = $false
-        for ($attempt = 1; $attempt -le 5; $attempt++) {
-            Write-Info "  TUI install attempt $attempt/5..."
-            cmd /c "npm.cmd install --workspace ui-tui --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
-            if ($LASTEXITCODE -eq 0) { $tuiOk = $true; break }
-            if ($attempt -lt 5) {
-                $delay = $attempt * 15
-                Write-Warn "  Failed -- waiting ${delay}s..."
-                Start-Sleep -Seconds $delay
-                $tuiNm = Join-Path $hermesInstallDir 'ui-tui\node_modules'
-                if (Test-Path $tuiNm) {
-                    Remove-Item $tuiNm -Recurse -Force -ErrorAction SilentlyContinue
-                    Start-Sleep -Seconds 5
-                }
-            }
-        }
-        if ($tuiOk) {
-            Write-Ok 'TUI workspace installed -- dashboard terminal will work'
-        }
-        else {
-            Write-Warn 'TUI workspace install failed -- dashboard chat may not work'
-        }
-
-        # Pre-build desktop (Electron) so hermes desktop launches immediately
-        Write-Info 'Pre-building desktop app (this may take 3-5 minutes)...'
-        Push-Location (Join-Path $hermesInstallDir 'apps\desktop')
-        $desktopNm = Join-Path (Get-Location) 'node_modules'
-        $desktopOk = $false
-        for ($attempt = 1; $attempt -le 5; $attempt++) {
-            Write-Info "  Desktop build attempt $attempt/5..."
-            cmd /c "npm.cmd install --no-fund --no-audit --ignore-scripts --prefer-offline 2>nul 1>nul"
-            cmd /c "npm.cmd run build 2>nul"
-            if ($LASTEXITCODE -eq 0) { $desktopOk = $true; break }
-            if ($attempt -lt 5) {
-                $delay = $attempt * 15
-                Write-Warn "  Failed -- waiting ${delay}s for antivirus..."
-                Start-Sleep -Seconds $delay
-                if (Test-Path $desktopNm) { Remove-Item $desktopNm -Recurse -Force -ErrorAction SilentlyContinue }
-            }
-        }
-        if ($desktopOk) {
-            Write-Ok 'Desktop app built -- hermes desktop will launch immediately'
-        }
-        else {
-            Write-Warn 'Desktop pre-build skipped -- will build on first launch'
-        }
-        Pop-Location
 
         Pop-Location
         
