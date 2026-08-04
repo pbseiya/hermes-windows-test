@@ -35,14 +35,24 @@ function Write-Elapsed {
     Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
 }
 
-# Helper: Fast directory removal using robocopy trick
+# Helper: Fast directory removal
 function Remove-Fast {
     param([string]$Path)
     if (-not (Test-Path $Path)) { return }
-    $emptyDir = Join-Path $env:TEMP 'empty_for_rmdir'
-    if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
-    cmd /c "robocopy `"$emptyDir`" `"$Path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
-    Remove-Item $Path -Force -ErrorAction SilentlyContinue
+    
+    # For node_modules with long paths, use robocopy trick
+    if ($Path -like '*node_modules*') {
+        $emptyDir = Join-Path $env:TEMP "empty_for_rmdir_$([guid]::NewGuid().ToString('N').Substring(0,8))"
+        if (-not (Test-Path $emptyDir)) { 
+            New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null 
+        }
+        # Use /PURGE instead of /MIR, redirect all output
+        cmd /c "robocopy `"$emptyDir`" `"$Path`" /PURGE /NFL /NDL /NJH /NJS /nc /ns /np /nfl /ndl" 2>&1 | Out-Null
+        Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+    }
+    
+    # Remove the directory
+    Remove-Item $Path -Force -Recurse -ErrorAction SilentlyContinue
 }
 
 Write-Host ''
@@ -102,7 +112,8 @@ if (Test-Path $hermesDir) {
                 if (-not (Test-Path $tempDir)) { 
                     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null 
                 }
-                cmd /c "robocopy `"$tempDir`" `"$path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np" > $null 2>&1
+                # Use /PURGE instead of /MIR, redirect all output
+                cmd /c "robocopy `"$tempDir`" `"$path`" /PURGE /NFL /NDL /NJH /NJS /nc /ns /np /nfl /ndl" | Out-Null 2>&1
                 Remove-Item $path -Force -Recurse -ErrorAction SilentlyContinue
                 Remove-Item $tempDir -Force -ErrorAction SilentlyContinue
             } -ArgumentList $nm, (Join-Path $env:TEMP "empty_$([guid]::NewGuid().ToString('N').Substring(0,8))")
@@ -147,7 +158,8 @@ foreach ($dir in $dirsToRemove) {
             if (-not (Test-Path $emptyDir)) { 
                 New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null 
             }
-            cmd /c "robocopy `"$emptyDir`" `"$path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
+            # Use /PURGE instead of /MIR, redirect all output
+            cmd /c "robocopy `"$emptyDir`" `"$path`" /PURGE /NFL /NDL /NJH /NJS /nc /ns /np /nfl /ndl" | Out-Null 2>&1
             Remove-Item $path -Force -Recurse -ErrorAction SilentlyContinue
             Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
             if (-not (Test-Path $path)) {
