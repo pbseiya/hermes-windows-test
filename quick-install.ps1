@@ -923,8 +923,13 @@ else {
     $env:VIRTUAL_ENV = Join-Path $hermesInstallDir 'venv'
     $venvLib = Join-Path $hermesInstallDir 'venv\Lib\site-packages'
     $env:PYTHONPATH = "$hermesInstallDir;$venvLib"
-    Start-Process -FilePath $venvPythonPath -ArgumentList '-m', 'hermes_cli.main', 'gateway', 'run' -WindowStyle Hidden
+    
+    # Use pythonw.exe for background process (no console window)
+    $venvPythonwPath = Join-Path $venvScripts 'pythonw.exe'
+    Start-Process -FilePath $venvPythonwPath -ArgumentList '-m', 'hermes_cli.main', 'gateway', 'run' -WindowStyle Hidden
     Start-Sleep -Seconds 10
+    
+    # Check if gateway process is running
     $gwProcess = Get-Process -Name 'pythonw' -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*hermes*' }
     if ($gwProcess) {
         Write-Ok 'Telegram Gateway started'
@@ -1023,8 +1028,6 @@ Write-Host 'If dashboard/desktop fails (antivirus issue):' -ForegroundColor Cyan
 Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
 Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
 Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-Write-Host '     npm install --no-fund --no-audit' -ForegroundColor Yellow
-Write-Host '     npm install --workspace web --no-fund --no-audit' -ForegroundColor Yellow
 Write-Host '     npm run build -w web' -ForegroundColor Yellow
 Write-Host '  3. Re-enable antivirus' -ForegroundColor White
 Write-Host '  4. Try hermes dashboard / hermes desktop again' -ForegroundColor White
