@@ -103,4 +103,24 @@ hermes chat -q "สวัสดี"   # Test
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
 ```
 
-Takes ~2-3 minutes (uses fast robocopy-based deletion for all `node_modules`)
+Takes ~2-3 minutes (uses parallel fast deletion for all `node_modules`)
+
+### If Log is Too Long to Scroll
+
+If you cannot scroll up to see the full log:
+
+**Option 1: Increase Console Buffer Size**
+```powershell
+$host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size 120,9999
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
+```
+
+**Option 2: Redirect Output to File**
+```powershell
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex | Tee-Object -FilePath uninstall.log
+```
+
+Then view the log:
+```powershell
+notepad uninstall.log
+```
