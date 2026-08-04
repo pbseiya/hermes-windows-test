@@ -161,7 +161,7 @@ if (-not $nodeCmd) {
     $nodeDir = Join-Path $env:USERPROFILE '.local\node'
     if (-not (Test-Path $nodeDir)) { New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null }
 
-    $nodeUrl = 'https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip'
+    $nodeUrl = 'https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip'
     $nodeZip = Join-Path $nodeDir 'node.zip'
 
     Write-Info 'Downloading Node.js v22 portable (this may take 2-3 minutes)...'
