@@ -6,6 +6,15 @@
 
 $ErrorActionPreference = 'Continue'
 
+# Increase console buffer size for longer history
+try {
+    $buffer = $host.UI.RawUI.BufferSize
+    $buffer.Height = 9999
+    $host.UI.RawUI.BufferSize = $buffer
+} catch {
+    # Ignore if not supported (e.g., when piped)
+}
+
 # --- Timing helpers ---
 $script:StartTime = Get-Date
 $script:StepStartTime = Get-Date
@@ -93,8 +102,9 @@ if (Test-Path $hermesDir) {
                 if (-not (Test-Path $tempDir)) { 
                     New-Item -ItemType Directory -Path $tempDir -Force | Out-Null 
                 }
-                cmd /c "robocopy `"$tempDir`" `"$path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
+                cmd /c "robocopy `"$tempDir`" `"$path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np" > $null 2>&1
                 Remove-Item $path -Force -Recurse -ErrorAction SilentlyContinue
+                Remove-Item $tempDir -Force -ErrorAction SilentlyContinue
             } -ArgumentList $nm, (Join-Path $env:TEMP "empty_$([guid]::NewGuid().ToString('N').Substring(0,8))")
         }
     }
