@@ -14,26 +14,12 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 $ErrorActionPreference = 'Stop'
 
-# --- Timing helpers ---
-$script:StartTime = Get-Date
-$script:StepStartTime = Get-Date
-
+# --- Helpers ---
 function Write-Info    { param($msg) Write-Host '[INFO] ' -ForegroundColor Cyan -NoNewline; Write-Host $msg }
 function Write-Ok      { param($msg) Write-Host '[OK] ' -ForegroundColor Green -NoNewline; Write-Host $msg }
 function Write-Warn    { param($msg) Write-Host '[!] ' -ForegroundColor Yellow -NoNewline; Write-Host $msg }
 function Write-Err     { param($msg) Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
-function Write-Step    { 
-    param($msg) 
-    $elapsed = (Get-Date) - $script:StepStartTime
-    $elapsedStr = '{0:mm\:ss}' -f $elapsed
-    Write-Host ('`n=== {0} === [{1}]' -f $msg, $elapsedStr) -ForegroundColor Magenta
-    $script:StepStartTime = Get-Date
-}
-function Write-Elapsed {
-    $elapsed = (Get-Date) - $script:StartTime
-    $elapsedStr = '{0:mm\:ss}' -f $elapsed
-    Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
-}
+function Write-Step    { param($msg) Write-Host ('`n=== {0} ===' -f $msg) -ForegroundColor Magenta }
 
 # --- Python validation (Windows App Execution Alias detection) ---
 function Test-PythonValid {
@@ -149,7 +135,6 @@ if (-not $gitCmd) {
         Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
 
         Write-Ok 'Git Portable installed'
-        Write-Elapsed
 
         # Refresh PATH immediately so git is available in this session
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -204,7 +189,6 @@ if (-not $nodeCmd) {
         }
 
         Write-Ok 'Node.js v22 portable installed'
-        Write-Elapsed
     }
     catch {
         Write-Err "Node.js installation failed: $_`nPlease check your internet connection and try again."
@@ -287,7 +271,6 @@ if (-not $pythonIsValid) {
         }
 
         Write-Ok 'Python embeddable installed'
-        Write-Elapsed
     }
     catch {
         Write-Err "Python installation failed: $_`nPlease check your internet connection and try again.`nOr download manually from: https://python.org/downloads/"
@@ -364,7 +347,6 @@ if (-not $uvCmd) {
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
         Write-Ok 'uv installed'
-        Write-Elapsed
     }
     catch {
         Write-Warn 'uv installation failed -- Can install manually: irm https://astral.sh/uv/install.ps1 | iex'
@@ -682,7 +664,6 @@ if (-not $SkipInstall) {
             }
             Write-Ok "hermes installed at: $hermesBin"
             Write-Ok 'UI components included (desktop, dashboard, TUI)'
-            Write-Elapsed
         }
         else {
             Write-Warn 'hermes executable not found in venv'
@@ -753,7 +734,6 @@ else {
 
         Write-Ok "agy installed -> $agyBin"
         Write-Ok 'Start agy for first time to login with Google Account'
-        Write-Elapsed
     }
     catch {
         Write-Warn 'agy installation failed -- Can install manually later:'
@@ -1014,9 +994,7 @@ else {
         Write-Ok 'Create Windows Task Scheduler tasks'
         Write-Ok '  - HermesGateway (Telegram)'
         Write-Ok '  - HermesDashboard (Dashboard)'
-        Write-Info 'Start services with:'
-        Write-Host '  schtasks /Run /TN "HermesGateway"' -ForegroundColor Yellow
-        Write-Host '  schtasks /Run /TN "HermesDashboard"' -ForegroundColor Yellow
+        Write-Info 'Start services with: schtasks /Run /TN "HermesGateway" && schtasks /Run /TN "HermesDashboard"'
     }
     catch {
         Write-Warn 'Task Scheduler creation failed -- Using Startup Folder instead'
@@ -1106,11 +1084,12 @@ if ((Test-Path $webDist) -and (Test-Path $vitePkg)) {
 }
 else {
     Write-Warn 'Dashboard needs additional setup (antivirus blocked npm during install)'
-    Write-Host '  To enable dashboard:' -ForegroundColor Yellow
+    Write-Host '  To enable dashboard, run these commands:' -ForegroundColor Yellow
     Write-Host '  1. Temporarily disable antivirus real-time protection' -ForegroundColor White
     Write-Host '  2. Open PowerShell and run:' -ForegroundColor White
-    Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor Yellow
-    Write-Host '     npm run build -w web' -ForegroundColor Yellow
+    Write-Host '     cd $env:LOCALAPPDATA\hermes\hermes-agent' -ForegroundColor White
+    Write-Host '     npm install --no-fund --no-audit' -ForegroundColor White
+    Write-Host '     npm run build -w web' -ForegroundColor White
     Write-Host '  3. Re-enable antivirus' -ForegroundColor White
     Write-Host '  4. Run: hermes dashboard' -ForegroundColor White
 }
@@ -1124,7 +1103,6 @@ Write-Host ''
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host '                  Installation Complete!                    ' -ForegroundColor Green
 Write-Host '============================================================' -ForegroundColor Green
-Write-Elapsed
 Write-Host ''
 Write-Host 'Installed in user-space (No Admin required):' -ForegroundColor Cyan
 Write-Host '  - Node.js v22+ -> ~/.local/node/' -ForegroundColor White
