@@ -102,7 +102,53 @@ catch {
     Write-Err "Cannot connect to the internet.`nPlease check your Internet / Firewall / Proxy settings.`nIf your company uses a proxy, make sure it's configured in Internet Options."
 }
 
-# 1.3 Node.js v22+ (using nvm-windows or standalone)
+# 1.3 Git (user-space)
+$gitCmd = Get-Command git -ErrorAction SilentlyContinue
+if (-not $gitCmd) {
+    Write-Warn 'git not found -- Installing in user-space...'
+
+    # Downloading Git Portable
+    $gitDir = Join-Path $env:USERPROFILE '.local\git'
+    if (-not (Test-Path $gitDir)) { New-Item -ItemType Directory -Path $gitDir -Force | Out-Null }
+
+    $gitUrl = 'https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/PortableGit-2.47.1.2-64-bit.7z.exe'
+    $gitExe = Join-Path $gitDir 'PortableGit.7z.exe'
+
+    Write-Info 'Downloading Git Portable (this may take 1-2 minutes)...'
+    try {
+        Invoke-WebRequest -Uri $gitUrl -OutFile $gitExe -UseBasicParsing
+        Write-Info 'Extracting Git...'
+        Start-Process -FilePath $gitExe -ArgumentList ('-o"' + $gitDir + '"', '-y') -Wait -NoNewWindow
+
+        # Add to PATH
+        $gitBin = Join-Path $gitDir 'bin'
+        $gitCmdDir = Join-Path $gitDir 'cmd'
+        $env:Path = $gitBin + ';' + $gitCmdDir + ';' + $env:Path
+
+        # Add to User PATH permanently
+        $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
+        if ($userPath -notlike "*$gitDir*") {
+            [System.Environment]::SetEnvironmentVariable('Path', ($gitBin + ';' + $gitCmdDir + ';' + $userPath), 'User')
+        }
+
+        # Clean up installer
+        Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
+
+        Write-Ok 'Git Portable installed'
+
+        # Refresh PATH immediately so git is available in this session
+        $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
+    }
+    catch {
+        Write-Err "Git download failed: $_`nPlease check your internet connection and try again."
+    }
+}
+else {
+    $gitVer = (git --version) -replace 'git version ', ''
+    Write-Ok "git $gitVer"
+}
+
+# 1.4 Node.js v22+ (using nvm-windows or standalone)
 
 # Refresh PATH from registry to get previously installed Node.js
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -115,7 +161,7 @@ if (-not $nodeCmd) {
     $nodeDir = Join-Path $env:USERPROFILE '.local\node'
     if (-not (Test-Path $nodeDir)) { New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null }
 
-    $nodeUrl = 'https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip'
+    $nodeUrl = 'https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip'
     $nodeZip = Join-Path $nodeDir 'node.zip'
 
     Write-Info 'Downloading Node.js v22 portable (this may take 2-3 minutes)...'
@@ -198,7 +244,7 @@ if (-not $pythonIsValid) {
         Expand-Archive -Path $pythonZip -DestinationPath $pythonDir -Force
         Remove-Item -Path $pythonZip -Force
 
-        # Enable import site by fixing python311._pth (required for uv)
+        # Enable pip by fixing python311._pth
         $pthFile = Join-Path $pythonDir 'python311._pth'
         if (Test-Path $pthFile) {
             $pthContent = Get-Content $pthFile
@@ -206,11 +252,22 @@ if (-not $pythonIsValid) {
             [System.IO.File]::WriteAllText($pthFile, ($pthContent -join "`r`n"))
         }
 
-        # Add Python to PATH (no pip - we use uv)
-        $env:Path = $pythonDir + ';' + $env:Path
+        # Install pip
+        $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
+        $getPipFile = Join-Path $pythonDir 'get-pip.py'
+        # Delete existing file first (may be locked from previous install)
+        Remove-Item $getPipFile -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+        Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
+
+        $pythonExe = Join-Path $pythonDir 'python.exe'
+        Start-Process -FilePath $pythonExe -ArgumentList $getPipFile -Wait -NoNewWindow
+
+        $pythonScriptsDir = Join-Path $pythonDir 'Scripts'
+        $env:Path = $pythonDir + ';' + $pythonScriptsDir + ';' + $env:Path
         $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
         if ($userPath -notlike "*$pythonDir*") {
-            [System.Environment]::SetEnvironmentVariable('Path', ($pythonDir + ';' + $userPath), 'User')
+            [System.Environment]::SetEnvironmentVariable('Path', ($pythonDir + ';' + $pythonScriptsDir + ';' + $userPath), 'User')
         }
 
         Write-Ok 'Python embeddable installed'
@@ -237,6 +294,38 @@ if ($pythonIsValid) {
     }
     Write-Ok "Python $pythonVer"
 
+    # 1.7 pip
+    $pipCmd = Get-Command pip -ErrorAction SilentlyContinue
+    if (-not $pipCmd) {
+        $pipCmd = Get-Command pip3 -ErrorAction SilentlyContinue
+    }
+
+    if ($pipCmd) {
+        $pipVer = (pip --version 2>&1) -replace 'pip ', '' -replace ' from .*', ''
+        Write-Ok "pip $pipVer"
+    }
+    else {
+        Write-Warn 'pip not found -- Installing via get-pip.py...'
+        # Find python directory from current python executable
+        $currentPython = (Get-Command python -ErrorAction SilentlyContinue).Source
+        if (-not $currentPython) {
+            $currentPython = (Get-Command python3 -ErrorAction SilentlyContinue).Source
+        }
+        $pythonDir = Split-Path $currentPython -Parent
+        $pythonExe = $currentPython
+
+        $getPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
+        $getPipFile = Join-Path $pythonDir 'get-pip.py'
+        # Delete existing file first (may be locked from previous install)
+        Remove-Item $getPipFile -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+        Invoke-WebRequest -Uri $getPipUrl -OutFile $getPipFile -UseBasicParsing
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        & $pythonExe $getPipFile 2>&1 | Out-Null
+        $ErrorActionPreference = $prevEAP
+        Write-Ok 'pip installed'
+    }
 }
 else {
     Write-Err 'Python installation failed'
@@ -319,72 +408,78 @@ if (-not $SkipInstall) {
         }
     }
     
-    # Use download zip method (faster, avoids git fork bomb issues)
+    # Use git clone method to get full installation with UI components
     $hermesInstallDir = Join-Path $env:LOCALAPPDATA 'hermes\hermes-agent'
     
     Write-Info 'Installing hermes-agent with full UI support...'
     Write-Host ''
     
-    # Remove existing installation if exists
+    # Clone or update repository
     if (Test-Path $hermesInstallDir) {
-        Write-Info 'Removing existing installation...'
+        Write-Info 'Updating existing hermes-agent repository...'
         try {
-            # Kill any processes that might be holding files
-            Get-Process -Name 'hermes','Hermes','pythonw' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-            Start-Sleep -Seconds 2
-            Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction Stop
-            Write-Ok 'Old installation removed'
+            Push-Location $hermesInstallDir
+            git pull origin main 2>&1 | Out-Null
+            Pop-Location
+            Write-Ok 'Repository updated'
         }
         catch {
-            Write-Warn "Could not remove old installation: $_"
-            Write-Info 'Trying robocopy method...'
-            $emptyDir = Join-Path $env:TEMP 'empty_for_hermes'
-            if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
-            cmd /c "robocopy `"$emptyDir`" `"$hermesInstallDir`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>nul"
-            Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
-            Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction SilentlyContinue
-        }
-    }
-    
-    # Download latest release as zip
-    Write-Info 'Downloading hermes-agent repository...'
-    $zipUrl = 'https://github.com/NousResearch/hermes-agent/archive/refs/heads/main.zip'
-    $zipPath = Join-Path $env:TEMP 'hermes-agent-main.zip'
-    
-    try {
-        Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing -TimeoutSec 300
-        Write-Ok 'Downloaded repository'
-        
-        # Extract zip
-        Write-Info 'Extracting repository...'
-        $extractDir = Join-Path $env:TEMP 'hermes-agent-extract'
-        if (Test-Path $extractDir) { Remove-Item $extractDir -Recurse -Force }
-        Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
-        Remove-Item $zipPath -Force
-        
-        # Move to final location
-        $extractedFolder = Get-ChildItem -Path $extractDir -Directory | Select-Object -First 1
-        if ($extractedFolder) {
-            $hermesParentDir = Split-Path $hermesInstallDir -Parent
-            if (-not (Test-Path $hermesParentDir)) {
-                New-Item -ItemType Directory -Path $hermesParentDir -Force | Out-Null
+            Write-Warn 'Git pull failed -- Reinstalling...'
+            Pop-Location  # Make sure we're out of the directory
+            
+            # Kill any git processes that might be holding the directory
+            Get-Process git -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+
+            # Remove directory with retry (use robocopy for ALL node_modules)
+            $retryCount = 0
+            while ((Test-Path $hermesInstallDir) -and ($retryCount -lt 5)) {
+                try {
+                    # Fast-delete all node_modules directories using robocopy trick
+                    $nodeModulesPaths = @(
+                        (Join-Path $hermesInstallDir 'node_modules'),
+                        (Join-Path $hermesInstallDir 'web\node_modules'),
+                        (Join-Path $hermesInstallDir 'apps\desktop\node_modules'),
+                        (Join-Path $hermesInstallDir 'ui-tui\node_modules')
+                    )
+                    $emptyDir = Join-Path $env:TEMP 'empty_dir_for_rmdir'
+                    if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
+                    foreach ($nm in $nodeModulesPaths) {
+                        if (Test-Path $nm) {
+                            cmd /c "robocopy `"$emptyDir`" `"$nm`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np >nul 2>nul"
+                        }
+                    }
+                    Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+                    Remove-Item $hermesInstallDir -Recurse -Force -ErrorAction Stop
+                    break
+                }
+                catch {
+                    $retryCount++
+                    Start-Sleep -Seconds 3
+                }
             }
-            Move-Item -Path $extractedFolder.FullName -Destination $hermesInstallDir -Force
-            Remove-Item $extractDir -Recurse -Force -ErrorAction SilentlyContinue
-            Write-Ok 'Repository extracted'
-        }
-        else {
-            Write-Err "Failed to extract repository - no folder found in zip"
+
+            # Verify directory is gone before cloning
+            if (Test-Path $hermesInstallDir) {
+                Write-Err "Cannot remove old hermes directory: $hermesInstallDir`nPlease close any running hermes processes and try again, or remove manually:`n  Remove-Item '$hermesInstallDir' -Recurse -Force"
+            }
+
+            git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
         }
     }
-    catch {
-        Write-Err "Failed to download/extract repository: $_"
+    else {
+        Write-Info 'Cloning hermes-agent repository...'
+        $hermesParentDir = Join-Path $env:LOCALAPPDATA 'hermes'
+        if (-not (Test-Path $hermesParentDir)) {
+            New-Item -ItemType Directory -Path $hermesParentDir -Force | Out-Null
+        }
+        git clone --depth 1 https://github.com/NousResearch/hermes-agent.git $hermesInstallDir
     }
 
-    # Validate download succeeded
-    $hermesCli = Join-Path $hermesInstallDir 'hermes_cli'
-    if (-not (Test-Path $hermesCli)) {
-        Write-Err "Download failed -- hermes_cli directory not found.`nTry removing manually: Remove-Item '$hermesInstallDir' -Recurse -Force`nThen run this script again."
+    # Validate clone succeeded
+    $gitDir = Join-Path $hermesInstallDir '.git'
+    if (-not (Test-Path $gitDir)) {
+        Write-Err "Git clone failed -- hermes-agent directory is not a valid repository.`nTry removing it manually: Remove-Item '$hermesInstallDir' -Recurse -Force`nThen run this script again."
     }
 
     # Create virtual environment and install
@@ -418,7 +513,7 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
-        # Install all Node.js dependencies (required for dashboard, desktop, TUI)
+        # Install Node.js dependencies (required for dashboard, desktop, TUI)
         Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
         Write-Info 'This may take 10-20 minutes on first run...'
 
@@ -443,12 +538,13 @@ if (-not $SkipInstall) {
             return $false
         }
 
-        # Install all dependencies including workspaces
-        Write-Info 'Installing Node.js dependencies...'
-        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit'
+        # Use npm install with --ignore-scripts to bypass antivirus file locking
+        # Postinstall scripts (electron download, etc.) will be run separately
+        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
         if (-not $npmOk) {
             Write-Warn 'npm install failed -- Falling back to npm ci...'
-            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit'
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
         }
         if ($npmOk) {
             Write-Ok 'Node.js dependencies installed'
@@ -459,7 +555,7 @@ if (-not $SkipInstall) {
 
         # Download Electron binary separately (postinstall script)
         Write-Info 'Downloading Electron binary...'
-        $electronInstall = Join-Path $hermesInstallDir 'node_modules\\electron\\install.js'
+        $electronInstall = Join-Path $hermesInstallDir 'node_modules\electron\install.js'
         if (Test-Path $electronInstall) {
             cmd /c "node `"$electronInstall`" 2>nul 1>nul"
             if ($LASTEXITCODE -eq 0) {
@@ -470,13 +566,27 @@ if (-not $SkipInstall) {
             }
         }
 
-        # Install TypeScript explicitly (required for tsc command)
-        Write-Info 'Installing TypeScript compiler...'
-        cmd /c "npm.cmd install --no-save typescript 2>nul 1>nul"
-
         # Build web UI for dashboard (so it works immediately without rebuilding)
-        Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
-        cmd /c "npm.cmd run build -w web 2>nul"
+        Write-Info 'Installing web workspace dependencies...'
+        $webOk = $false
+        for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Info "  Web install attempt $attempt/5..."
+            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
+            if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
+            if ($attempt -lt 5) {
+                $delay = $attempt * 15
+                Write-Warn "  Failed -- waiting ${delay}s for antivirus to release files..."
+                Start-Sleep -Seconds $delay
+                $webNm = Join-Path $hermesInstallDir 'web\node_modules'
+                if (Test-Path $webNm) {
+                    Remove-Item $webNm -Recurse -Force -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 5
+                }
+            }
+        }
+        if ($webOk) {
+            Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
+            cmd /c "npm.cmd run build -w web 2>nul"
             if ($LASTEXITCODE -eq 0) {
                 Write-Ok 'Dashboard web UI built -- ready to use immediately'
             }
@@ -994,7 +1104,7 @@ Write-Host 'Installed in user-space (No Admin required):' -ForegroundColor Cyan
 Write-Host '  - Node.js v22+ -> ~/.local/node/' -ForegroundColor White
 Write-Host '  - Python 3.11+ -> ~/.local/python/' -ForegroundColor White
 Write-Host '  - uv -> ~/.local/bin/' -ForegroundColor White
-Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (downloaded)' -ForegroundColor White
+Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (git clone)' -ForegroundColor White
 Write-Host '  - agy -> ~/AppData/Local/agy/bin/' -ForegroundColor White
 Write-Host ''
 Write-Host 'Configuration:' -ForegroundColor Cyan
