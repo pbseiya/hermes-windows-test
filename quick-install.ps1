@@ -49,6 +49,31 @@ Write-Host '============================================================' -Foreg
 Write-Host '   Hermes Agent Quick Install (User-Space -- No Admin)     ' -ForegroundColor Cyan
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host ''
+Write-Host '⚠️  IMPORTANT: Disable ALL antivirus real-time protection!' -ForegroundColor Yellow
+Write-Host '   - Trend Micro Apex One' -ForegroundColor Yellow
+Write-Host '   - Windows Defender (Set-MpPreference -DisableRealtimeMonitoring $true)' -ForegroundColor Yellow
+Write-Host ''
+
+# Auto-detect antivirus status
+$avWarnings = @()
+$trendMicro = Get-Process -Name 'TmListen','TmPfw','Tmntsrv' -ErrorAction SilentlyContinue
+if ($trendMicro) {
+    $avWarnings += 'Trend Micro is running!'
+}
+$defender = Get-MpPreference -ErrorAction SilentlyContinue
+if ($defender -and $defender.DisableRealtimeMonitoring -eq $false) {
+    $avWarnings += 'Windows Defender real-time protection is ON!'
+}
+if ($avWarnings.Count -gt 0) {
+    Write-Host ''
+    Write-Host '❌ WARNING: Antivirus detected!' -ForegroundColor Red
+    foreach ($w in $avWarnings) { Write-Host "   $w" -ForegroundColor Red }
+    Write-Host ''
+    Write-Host '   Installation may FAIL if antivirus is active.' -ForegroundColor Red
+    Write-Host '   Press Ctrl+C to cancel and disable antivirus first.' -ForegroundColor Red
+    Write-Host ''
+    Start-Sleep -Seconds 5
+}
 
 # --- Detect Environment ---
 $isWSL = $false
@@ -463,7 +488,10 @@ if (-not $SkipInstall) {
         $uvOk = $false
         for ($uvAttempt = 1; $uvAttempt -le 3; $uvAttempt++) {
             Write-Info "  uv pip install attempt $uvAttempt/3..."
+            $prevEAP = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
             uv pip install -e '.[all]' --link-mode=copy --quiet 2>&1 | Out-Null
+            $ErrorActionPreference = $prevEAP
             if ($LASTEXITCODE -eq 0) {
                 $uvOk = $true
                 break
