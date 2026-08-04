@@ -102,58 +102,7 @@ catch {
     Write-Err "Cannot connect to the internet.`nPlease check your Internet / Firewall / Proxy settings.`nIf your company uses a proxy, make sure it's configured in Internet Options."
 }
 
-# 1.3 Git (user-space)
-$gitCmd = Get-Command git -ErrorAction SilentlyContinue
-if (-not $gitCmd) {
-    Write-Warn 'git not found -- Installing in user-space...'
-
-    # Downloading Git Portable
-    $gitDir = Join-Path $env:USERPROFILE '.local\git'
-    if (-not (Test-Path $gitDir)) { New-Item -ItemType Directory -Path $gitDir -Force | Out-Null }
-
-    $gitUrl = 'https://github.com/git-for-windows/git/releases/download/v2.47.1.windows.2/PortableGit-2.47.1.2-64-bit.7z.exe'
-    $gitExe = Join-Path $gitDir 'PortableGit.7z.exe'
-
-    Write-Info 'Downloading Git Portable (this may take 1-2 minutes)...'
-    try {
-        Invoke-WebRequest -Uri $gitUrl -OutFile $gitExe -UseBasicParsing
-        Write-Info 'Extracting Git...'
-        Start-Process -FilePath $gitExe -ArgumentList ('-o"' + $gitDir + '"', '-y') -Wait -NoNewWindow
-
-        # Add to PATH
-        $gitBin = Join-Path $gitDir 'bin'
-        $gitCmdDir = Join-Path $gitDir 'cmd'
-        $env:Path = $gitBin + ';' + $gitCmdDir + ';' + $env:Path
-
-        # Add to User PATH permanently
-        $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
-        if ($userPath -notlike "*$gitDir*") {
-            [System.Environment]::SetEnvironmentVariable('Path', ($gitBin + ';' + $gitCmdDir + ';' + $userPath), 'User')
-        }
-
-        # Clean up installer
-        Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
-
-        Write-Ok 'Git Portable installed'
-    }
-    catch {
-        Write-Err "Git download failed: $_`nPlease check your internet connection and try again."
-    }
-}
-else {
-    $gitVer = (git --version) -replace 'git version ', ''
-    Write-Ok "git $gitVer"
-}
-
-# Ensure git is in PATH (critical for git clone operations)
-$gitDir = Join-Path $env:USERPROFILE '.local\git'
-$gitBin = Join-Path $gitDir 'bin'
-$gitCmdDir = Join-Path $gitDir 'cmd'
-if (-not ($env:Path -like "*$gitBin*")) {
-    $env:Path = $gitBin + ';' + $gitCmdDir + ';' + $env:Path
-}
-
-# 1.4 Node.js v22+ (using nvm-windows or standalone)
+# 1.3 Node.js v22+ (using nvm-windows or standalone)
 
 # Refresh PATH from registry to get previously installed Node.js
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -469,7 +418,7 @@ if (-not $SkipInstall) {
         cmd /c "npm.cmd config set fetch-retry-mintimeout 10000 2>nul"
         cmd /c "npm.cmd config set fetch-retry-maxtimeout 120000 2>nul"
 
-        # Install Node.js dependencies (required for dashboard, desktop, TUI)
+        # Install all Node.js dependencies (required for dashboard, desktop, TUI)
         Write-Info 'Installing Node.js dependencies (dashboard, desktop, TUI)...'
         Write-Info 'This may take 10-20 minutes on first run...'
 
@@ -494,13 +443,12 @@ if (-not $SkipInstall) {
             return $false
         }
 
-        # Use npm install with --ignore-scripts to bypass antivirus file locking
-        # Postinstall scripts (electron download, etc.) will be run separately
-        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
-        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
+        # Install all dependencies including workspaces
+        Write-Info 'Installing Node.js dependencies...'
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit'
         if (-not $npmOk) {
             Write-Warn 'npm install failed -- Falling back to npm ci...'
-            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit'
         }
         if ($npmOk) {
             Write-Ok 'Node.js dependencies installed'
@@ -511,7 +459,7 @@ if (-not $SkipInstall) {
 
         # Download Electron binary separately (postinstall script)
         Write-Info 'Downloading Electron binary...'
-        $electronInstall = Join-Path $hermesInstallDir 'node_modules\electron\install.js'
+        $electronInstall = Join-Path $hermesInstallDir 'node_modules\\electron\\install.js'
         if (Test-Path $electronInstall) {
             cmd /c "node `"$electronInstall`" 2>nul 1>nul"
             if ($LASTEXITCODE -eq 0) {
@@ -522,31 +470,13 @@ if (-not $SkipInstall) {
             }
         }
 
+        # Install TypeScript explicitly (required for tsc command)
+        Write-Info 'Installing TypeScript compiler...'
+        cmd /c "npm.cmd install --no-save typescript 2>nul 1>nul"
+
         # Build web UI for dashboard (so it works immediately without rebuilding)
-        Write-Info 'Installing web workspace dependencies...'
-        $webOk = $false
-        for ($attempt = 1; $attempt -le 5; $attempt++) {
-            Write-Info "  Web install attempt $attempt/5..."
-            cmd /c "npm.cmd install --workspace web --no-fund --no-audit --prefer-offline 2>nul 1>nul"
-            if ($LASTEXITCODE -eq 0) { $webOk = $true; break }
-            if ($attempt -lt 5) {
-                $delay = $attempt * 15
-                Write-Warn "  Failed -- waiting ${delay}s for antivirus to release files..."
-                Start-Sleep -Seconds $delay
-                $webNm = Join-Path $hermesInstallDir 'web\node_modules'
-                if (Test-Path $webNm) {
-                    Remove-Item $webNm -Recurse -Force -ErrorAction SilentlyContinue
-                    Start-Sleep -Seconds 5
-                }
-            }
-        }
-        if ($webOk) {
-            # Ensure TypeScript is installed in root (required for tsc command)
-            Write-Info 'Installing TypeScript compiler...'
-            cmd /c "npm.cmd install --no-save typescript 2>nul 1>nul"
-            
-            Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
-            cmd /c "npm.cmd run build -w web 2>nul"
+        Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
+        cmd /c "npm.cmd run build -w web 2>nul"
             if ($LASTEXITCODE -eq 0) {
                 Write-Ok 'Dashboard web UI built -- ready to use immediately'
             }
