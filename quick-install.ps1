@@ -14,12 +14,26 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
 $ErrorActionPreference = 'Stop'
 
-# --- Helpers ---
+# --- Timing helpers ---
+$script:StartTime = Get-Date
+$script:StepStartTime = Get-Date
+
 function Write-Info    { param($msg) Write-Host '[INFO] ' -ForegroundColor Cyan -NoNewline; Write-Host $msg }
 function Write-Ok      { param($msg) Write-Host '[OK] ' -ForegroundColor Green -NoNewline; Write-Host $msg }
 function Write-Warn    { param($msg) Write-Host '[!] ' -ForegroundColor Yellow -NoNewline; Write-Host $msg }
 function Write-Err     { param($msg) Write-Host '[ERROR] ' -ForegroundColor Red -NoNewline; Write-Host $msg; exit 1 }
-function Write-Step    { param($msg) Write-Host ('`n=== {0} ===' -f $msg) -ForegroundColor Magenta }
+function Write-Step    { 
+    param($msg) 
+    $elapsed = (Get-Date) - $script:StepStartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host ('`n=== {0} === [{1}]' -f $msg, $elapsedStr) -ForegroundColor Magenta
+    $script:StepStartTime = Get-Date
+}
+function Write-Elapsed {
+    $elapsed = (Get-Date) - $script:StartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
+}
 
 # --- Python validation (Windows App Execution Alias detection) ---
 function Test-PythonValid {
@@ -135,6 +149,7 @@ if (-not $gitCmd) {
         Remove-Item $gitExe -Force -ErrorAction SilentlyContinue
 
         Write-Ok 'Git Portable installed'
+        Write-Elapsed
 
         # Refresh PATH immediately so git is available in this session
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
@@ -189,6 +204,7 @@ if (-not $nodeCmd) {
         }
 
         Write-Ok 'Node.js v22 portable installed'
+        Write-Elapsed
     }
     catch {
         Write-Err "Node.js installation failed: $_`nPlease check your internet connection and try again."
@@ -271,6 +287,7 @@ if (-not $pythonIsValid) {
         }
 
         Write-Ok 'Python embeddable installed'
+        Write-Elapsed
     }
     catch {
         Write-Err "Python installation failed: $_`nPlease check your internet connection and try again.`nOr download manually from: https://python.org/downloads/"
@@ -347,6 +364,7 @@ if (-not $uvCmd) {
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
         Write-Ok 'uv installed'
+        Write-Elapsed
     }
     catch {
         Write-Warn 'uv installation failed -- Can install manually: irm https://astral.sh/uv/install.ps1 | iex'
@@ -660,6 +678,7 @@ if (-not $SkipInstall) {
             }
             Write-Ok "hermes installed at: $hermesBin"
             Write-Ok 'UI components included (desktop, dashboard, TUI)'
+            Write-Elapsed
         }
         else {
             Write-Warn 'hermes executable not found in venv'
@@ -730,6 +749,7 @@ else {
 
         Write-Ok "agy installed -> $agyBin"
         Write-Ok 'Start agy for first time to login with Google Account'
+        Write-Elapsed
     }
     catch {
         Write-Warn 'agy installation failed -- Can install manually later:'
@@ -1100,6 +1120,7 @@ Write-Host ''
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host '                  Installation Complete!                    ' -ForegroundColor Green
 Write-Host '============================================================' -ForegroundColor Green
+Write-Elapsed
 Write-Host ''
 Write-Host 'Installed in user-space (No Admin required):' -ForegroundColor Cyan
 Write-Host '  - Node.js v22+ -> ~/.local/node/' -ForegroundColor White
