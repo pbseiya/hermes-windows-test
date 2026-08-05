@@ -1,7 +1,12 @@
 # Hermes Agent Windows Installation (Course 0)
 
+![Latest Release](https://img.shields.io/github/v/release/pbseiya/hermes-windows-test?label=Latest&sort=semver)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 **Repository:** `pbseiya/hermes-windows-test`
-**Creator:** Hermes Agent Training Team | **Updated:** 2026-07-24
+**Creator:** Hermes Agent Training Team
+
+[Releases](https://github.com/pbseiya/hermes-windows-test/releases) | [Changelog](CHANGELOG.md) | [Installation Guide](INSTALLATION_GUIDE.md) | [Testing Guide](TESTING_GUIDE.md)
 
 This repository provides automated installation scripts, guides, and course materials for setting up the Hermes Agent on Windows.
 
