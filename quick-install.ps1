@@ -819,6 +819,9 @@ Write-Host '  Base URL: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v
 Write-Host '  Model: qwen3.7-plus' -ForegroundColor White
 Write-Host ''
 
+# Initialize models array (used in Step 5 even if API key is skipped)
+$LiteLLMModels = @()
+
 $LiteLLMKey = Read-Host 'Paste LiteLLM API Key (or press Enter to skip)'
 
 if (-not [string]::IsNullOrWhiteSpace($LiteLLMKey)) {
