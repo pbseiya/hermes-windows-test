@@ -405,11 +405,12 @@ if (-not $SkipInstall) {
             Write-Ok 'Python 3.11 installed'
         }
         
-        # Create venv using uv venv (matches official hermes installer)
+        # Create venv using python -m venv (avoids uv trampoline issue)
         $venvDir = Join-Path $hermesInstallDir 'venv'
         if (-not (Test-Path $venvDir)) {
             Write-Info 'Creating virtual environment with Python 3.11...'
-            uv venv $venvDir --python 3.11
+            $pythonPath = uv python find 3.11
+            & $pythonPath -m venv $venvDir
             if ($LASTEXITCODE -ne 0) {
                 Write-Err "Failed to create virtual environment"
                 throw "venv creation failed"
@@ -426,16 +427,16 @@ if (-not $SkipInstall) {
         # Try full install first, fall back to smaller sets if rate-limited
         Write-Info 'Installing hermes-agent Python packages...'
         $installSets = @('[all]', '[messaging,dashboard,ext]', '[messaging]', '')
-        $uvOk = $false
+        $pipOk = $false
         
         foreach ($extra in $installSets) {
             $package = if ($extra) { ".$extra" } else { "." }
-            Write-Info "  Trying uv pip install -e $package..."
-            uv pip install -e $package
+            Write-Info "  Trying pip install -e $package..."
+            & $venvPythonPath -m pip install -e $package --quiet
             $exitCode = $LASTEXITCODE
             
             if ($exitCode -eq 0) {
-                $uvOk = $true
+                $pipOk = $true
                 Write-Ok "Python packages installed ($package)"
                 break
             } else {
@@ -446,7 +447,7 @@ if (-not $SkipInstall) {
             }
         }
         
-        if (-not $uvOk) {
+        if (-not $pipOk) {
             Write-Warn 'Python packages install had issues -- hermes may not work'
         }
 
