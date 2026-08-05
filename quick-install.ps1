@@ -54,49 +54,6 @@ Write-Host '   - Trend Micro Apex One' -ForegroundColor Yellow
 Write-Host '   - Windows Defender (Set-MpPreference -DisableRealtimeMonitoring $true)' -ForegroundColor Yellow
 Write-Host ''
 
-# Auto-detect antivirus status using Windows Security Center
-$avWarnings = @()
-
-# Query all registered antivirus products via WMI
-$avProducts = Get-CimInstance -Namespace "root\SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
-
-if ($avProducts) {
-    foreach ($av in $avProducts) {
-        $avName = $av.displayName
-        $state = $av.productState
-        
-        # Decode productState bitmask
-        # High byte (0xFF0000): AV state - 0x00=up-to-date, 0x01=outdated, 0x10=snoozed
-        # Middle byte (0x00FF00): Real-time status - 0x00=off, 0x01=on
-        # Low byte (0x0000FF): Signature status - 0x00=up-to-date, 0x01=outdated
-        
-        $realTimeStatus = ($state -band 0x00FF00) >> 8  # Extract middle byte
-        
-        # Check if real-time protection is active
-        # 0x01 = enabled, 0x00 = disabled
-        if ($realTimeStatus -eq 1) {
-            $avWarnings += "$avName is active (state: $state)"
-        }
-    }
-}
-
-if ($avWarnings.Count -gt 0) {
-    Write-Host ''
-    Write-Host '❌ WARNING: Antivirus detected!' -ForegroundColor Red
-    foreach ($w in $avWarnings) { Write-Host "   • $w" -ForegroundColor Red }
-    Write-Host ''
-    Write-Host '   Installation may FAIL if antivirus is active.' -ForegroundColor Red
-    Write-Host '   We recommend disabling ALL antivirus before continuing.' -ForegroundColor Red
-    Write-Host ''
-    
-    $response = Read-Host 'Continue anyway? (y/N)'
-    if ($response -ne 'y' -and $response -ne 'Y') {
-        Write-Host ''
-        Write-Host 'Installation cancelled. Please disable antivirus and try again.' -ForegroundColor Yellow
-        exit 0
-    }
-}
-
 # --- Detect Environment ---
 $isWSL = $false
 if (Test-Path '/proc/version') {
