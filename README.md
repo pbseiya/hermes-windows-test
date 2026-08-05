@@ -66,13 +66,40 @@ irm ... | iex | Tee-Object -FilePath install.log
 
 ---
 
-## 🚀 Post-Installation Features
+##  Post-Installation Features
 
 | Feature | Availability / Requirements |
 | :--- | :--- |
 | **Telegram Gateway** | Immediately available (No AV disable needed) |
 | **Dashboard** | Requires antivirus to be disabled during install |
 | **Desktop** | Requires antivirus to be disabled during install |
+
+### Start Services Manually
+
+After installation, start services manually for the current session:
+
+```powershell
+hermes gateway start    # Start Telegram Gateway
+hermes dashboard        # Open Dashboard in browser
+hermes desktop          # Launch Desktop app
+```
+
+### Auto-Start After Reboot
+
+The installer sets up auto-start via **Windows Task Scheduler** (preferred) or **Startup Folder** (fallback).
+
+**If auto-start doesn't work** (e.g., no admin rights for Task Scheduler):
+```powershell
+# Check if tasks exist
+schtasks /Query /TN "HermesGateway"
+schtasks /Query /TN "HermesDashboard"
+
+# If not found, create shortcuts manually in Startup Folder:
+# 1. Open: %APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+# 2. Create shortcuts to:
+#    - hermes.exe gateway start
+#    - hermes.exe dashboard
+```
 
 ---
 

@@ -1102,19 +1102,26 @@ else {
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Days 0) -StartWhenAvailable
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -RunLevel Limited
 
-        Register-ScheduledTask -TaskName 'HermesGateway' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description 'Hermes Agent Telegram Gateway' -Force | Out-Null
+        Register-ScheduledTask -TaskName 'HermesGateway' -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description 'Hermes Agent Telegram Gateway' -Force -ErrorAction Stop | Out-Null
 
         # Create task for dashboard (run at logon with 60s delay)
         $action2 = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument ('/c "' + $dashboardBat + '"')
         $trigger2 = New-ScheduledTaskTrigger -AtLogOn
         $trigger2.Delay = 'PT60S'
 
-        Register-ScheduledTask -TaskName 'HermesDashboard' -Action $action2 -Trigger $trigger2 -Settings $settings -Principal $principal -Description 'Hermes Agent Web Dashboard' -Force | Out-Null
+        Register-ScheduledTask -TaskName 'HermesDashboard' -Action $action2 -Trigger $trigger2 -Settings $settings -Principal $principal -Description 'Hermes Agent Web Dashboard' -Force -ErrorAction Stop | Out-Null
 
         Write-Ok 'Create Windows Task Scheduler tasks'
         Write-Ok '  - HermesGateway (Telegram)'
         Write-Ok '  - HermesDashboard (Dashboard)'
         Write-Info 'Start services with: schtasks /Run /TN "HermesGateway" && schtasks /Run /TN "HermesDashboard"'
+
+        # Verify tasks were actually created
+        $gwExists = schtasks /Query /TN 'HermesGateway' 2>$null
+        $dbExists = schtasks /Query /TN 'HermesDashboard' 2>$null
+        if (-not $gwExists -or -not $dbExists) {
+            throw 'Task Scheduler verification failed -- tasks not found after creation'
+        }
     }
     catch {
         Write-Warn 'Task Scheduler creation failed -- Using Startup Folder instead'

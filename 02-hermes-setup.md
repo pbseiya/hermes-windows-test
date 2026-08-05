@@ -221,18 +221,30 @@ hermes gateway start
 
 **Features:**
 - Chat via Telegram bot
-- Auto-start after reboot (Task Scheduler)
+- Auto-start after reboot (Task Scheduler or Startup Folder)
 - Model switching with `/model` command (20 models)
 - Session management
 - Cron job delivery to Telegram
 
 **Auto-start Behavior:**
-- `HermesGateway` task (30s delay after login)
-- `HermesDashboard` task (60s delay after login)
+- `HermesGateway` task (30s delay after login) via Task Scheduler
+- `HermesDashboard` task (60s delay after login) via Task Scheduler
+- **Fallback:** If Task Scheduler fails (Access denied), shortcuts are created in Startup Folder
 
 **Manual Start (if needed):**
 ```powershell
-schtasks /Run /TN "HermesGateway"
+hermes gateway start
+hermes dashboard
+```
+
+**Check Auto-start:**
+```powershell
+# Check Task Scheduler
+schtasks /Query /TN "HermesGateway"
+schtasks /Query /TN "HermesDashboard"
+
+# Check Startup Folder
+dir "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
 ```
 
 ---
@@ -425,15 +437,37 @@ schtasks /Query /TN "HermesGateway"
 schtasks /Query /TN "HermesDashboard"
 ```
 
-**Manual start:**
+**If tasks not found (Access denied during install):**
+
+Create shortcuts manually in Startup Folder:
+
+1. Open Startup Folder:
 ```powershell
-schtasks /Run /TN "HermesGateway"
-schtasks /Run /TN "HermesDashboard"
+explorer "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
 ```
 
-**Fallback:** Check Startup Folder:
-```
-%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+2. Create shortcut for Gateway:
+- Right-click → New → Shortcut
+- Location: `C:\Users\<YourUsername>\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe gateway start`
+- Name: `HermesGateway`
+
+3. Create shortcut for Dashboard:
+- Right-click → New → Shortcut
+- Location: `C:\Users\<YourUsername>\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe dashboard`
+- Name: `HermesDashboard`
+
+**Or use PowerShell to create shortcuts:**
+```powershell
+$WshShell = New-Object -ComObject WScript.Shell
+$Shortcut = $WshShell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\HermesGateway.lnk")
+$Shortcut.TargetPath = "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"
+$Shortcut.Arguments = 'gateway start'
+$Shortcut.Save()
+
+$Shortcut2 = $WshShell.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\HermesDashboard.lnk")
+$Shortcut2.TargetPath = "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"
+$Shortcut2.Arguments = 'dashboard'
+$Shortcut2.Save()
 ```
 
 ### Problem 6: API Key Issues

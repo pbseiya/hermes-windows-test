@@ -215,7 +215,7 @@ All tools are added to the User PATH automatically. **You must open a new PowerS
 | **`agy: command not found`** | PATH not loaded or not logged in. **Fix:** Open new PowerShell, then run `agy` to login with Google. |
 | **Dashboard/Desktop not working** | Missing web build. **Fix:** Run `npm install --no-fund --no-audit && npm run build -w web` in `%LOCALAPPDATA%\hermes\hermes-agent` |
 | **Telegram bot not responding** | Gateway not running. **Fix:** `hermes gateway start` or `schtasks /Run /TN "HermesGateway"` |
-| **Services not starting after reboot** | Task Scheduler tasks missing. **Fix:** `schtasks /Run /TN "HermesGateway"` and `schtasks /Run /TN "HermesDashboard"` |
+| **Services not starting after reboot** | Task Scheduler tasks missing (Access denied). **Fix:** Create shortcuts manually in Startup Folder (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`) pointing to `hermes.exe gateway start` and `hermes.exe dashboard` |
 | **Download fails** | Internet/Proxy issue. **Fix:** Check connection or configure corporate proxy. |
 | **Desktop shows errors on first launch** | Normal warnings (registry, WSL, session 404s). Harmless. Only investigate if window fails to open. |
 
