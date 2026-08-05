@@ -1,16 +1,17 @@
 # 📋 คู่มือทดสอบการติดตั้ง Hermes Agent (Course 0)
 
-**Version:** 2.0 | **Updated:** 2026-07-24 | **Platform:** Windows Only
+**Version:** 1.0.0 | **Updated:** 2026-08-05 | **Platform:** Windows Only
 
 ---
 
-## 🎯 วัตถุประสงค์
+##  วัตถุประสงค์
 
 ทดสอบ Quick Install Script บน Windows เพื่อตรวจสอบว่า:
 - ✅ ส่วนประกอบทั้งหมดติดตั้งสำเร็จ
-- ✅ Hermes CLI และ Gateway ใช้งานได้
+- ✅ Hermes CLI, TUI, Dashboard, Desktop ใช้งานได้
 - ✅ Telegram Bot ตอบกลับได้
-- ✅ Dashboard และ Desktop เข้าถึงได้
+- ✅ Auto-query 20 models จาก LiteLLM proxy
+- ✅ agy (Antigravity CLI) ใช้งานได้
 
 ---
 
@@ -26,9 +27,10 @@
 ### ไฟล์ประกอบ (ถ้าต้องการดู)
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `02-hermes-setup.md` | Slides แบบ Markdown (source) |
+| `02-hermes-setup.md` | Course Module 02 (พร้อมรูปประกอบ) |
 | `INSTALLATION_GUIDE.md` | คู่มือติดตั้งฉบับละเอียด |
 | `ONE_LINE_COMMANDS.md` | สรุปคำสั่ง one-liner |
+| `CHANGELOG.md` | ประวัติการเปลี่ยนแปลง |
 
 ---
 
@@ -62,38 +64,51 @@ powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.c
 | 6. **ติดตั้ง Hermes Agent** | ผ่าน `uv pip install -e '.[all]'` + npm build |
 | 7. **ติดตั้ง Antigravity CLI (agy)** | Gemini CLI สำหรับซ่อม hermes |
 | 8. **ถามข้อมูลผู้ใช้** | LiteLLM API Key, Telegram Bot Token, Telegram Chat ID |
-| 9. **ตั้งค่า Config** | เขียน `.env` และ `config.yaml` ที่ `%LOCALAPPDATA%\hermes\` |
-| 10. **ตั้ง Auto-start** | Windows Task Scheduler (Gateway 30s, Dashboard 60s) |
-| 11. **เริ่ม Gateway** | Telegram Gateway ทำงานทันทีหลังติดตั้ง |
+| 9. **Auto-query 20 models** | Query จาก LiteLLM proxy หลังใส่ API key |
+| 10. **ตั้งค่า Config** | เขียน `.env` และ `config.yaml` พร้อม 20 models ที่ `%LOCALAPPDATA%\hermes\` |
+| 11. **ตั้ง Auto-start** | Windows Task Scheduler (Gateway 30s, Dashboard 60s) |
+| 12. **เริ่ม Gateway** | Telegram Gateway ทำงานทันทีหลังติดตั้ง |
 
 ---
 
 ## ✅ Checklist ทดสอบหลังติดตั้ง
 
 ### Core Functions
-- [ ] `hermes --version` แสดง version
+- [ ] `hermes --version` แสดง version (v0.20.0)
 - [ ] `hermes` เปิด CLI ได้
 - [ ] ส่งข้อความ "สวัสดี" แล้วได้รับคำตอบ
 - [ ] `hermes doctor` ไม่ error
-- [ ] `hermes model` แสดง provider ปัจจุบัน
+- [ ] `hermes model` แสดง 20 models ที่พร้อมใช้
+
+### TUI (Terminal UI)
+- [ ] `hermes --tui` เปิด TUI interface ได้
+- [ ] TUI แสดง panels และ navigation ได้
 
 ### Dashboard & Desktop
 - [ ] `hermes dashboard` เปิดได้ที่ http://localhost:9119
+- [ ] Dashboard แสดง Sessions, Models, Config pages
+- [ ] Model dropdown แสดง 20 models
 - [ ] `hermes desktop` เปิด Electron app ได้
+- [ ] Desktop แสดงหน้าต่างพร้อม chat interface
 
 ### Telegram
 - [ ] Telegram bot ตอบกลับข้อความ
+- [ ] ส่ง `/model` แล้วเห็นปุ่มเลือก 20 models
+- [ ] เลือก model แล้วเปลี่ยนได้
 
 ### Antigravity CLI
-- [ ] `agy` รันได้ (ครั้งแรกต้อง login ด้วย Google Account)
+- [ ] `agy` รันได้
+- [ ] ครั้งแรกต้อง login ด้วย Google Account
+- [ ] `agy doctor` ตรวจสอบปัญหาได้
 
 ### Auto-start
 - [ ] Restart เครื่องแล้ว Gateway ทำงานอัตโนมัติ
 - [ ] Restart เครื่องแล้ว Dashboard ทำงานอัตโนมัติ
+- [ ] ตรวจสอบ Task Scheduler: `schtasks /Query /TN "HermesGateway"`
 
 ### Config Files
 - [ ] `%LOCALAPPDATA%\hermes\.env` มี API key
-- [ ] `%LOCALAPPDATA%\hermes\config.yaml` มีการตั้งค่าถูกต้อง
+- [ ] `%LOCALAPPDATA%\hermes\config.yaml` มี 20 models ใน providers.litellm.models
 
 ---
 
@@ -159,9 +174,9 @@ $env:Path = "$env:USERPROFILE\.local\python;$env:Path"
 **สาเหตุ:** Antivirus บล็อก npm ตอนติดตั้ง
 
 **วิธีแก้:**
-รันคำสั่ง:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
+npm install --no-fund --no-audit
 npm run build -w web
 ```
 แล้วรัน `hermes dashboard` หรือ `hermes desktop` อีกครั้ง
@@ -189,7 +204,16 @@ schtasks /Run /TN "HermesGateway"
 schtasks /Run /TN "HermesDashboard"
 ```
 
-### 9. Internet / Proxy Issues
+### 9. Desktop แสดง errors ตอนเปิดครั้งแรก
+**Warnings ปกติ (ไม่กระทบ):**
+- `[DIRTY] from local` — Git working tree ไม่ clean ตอน build
+- `registry key not found` — Windows registry lookup สำหรับ optional feature
+- `WSL is not installed` — Hermes ไม่จำเป็นต้องใช้ WSL
+- `Session not found (404)` — Race condition ตอน startup, หายเองหลัง retry
+
+**ตรวจสอบเพิ่มเฉพาะเมื่อ:** หน้าต่าง Desktop ไม่เปิด หรือแสดงหน้าจอว่างหลัง startup
+
+### 10. Internet / Proxy Issues
 - ตรวจสอบ firewall
 - ถ้าใช้ corporate proxy อาจต้องตั้งค่า proxy ใน PowerShell
 
@@ -217,8 +241,20 @@ schtasks /Run /TN "HermesDashboard"
 | uv | ✅ สำเร็จ / ❌ ล้มเหลว | |
 | Hermes Agent | ✅ สำเร็จ / ❌ ล้มเหลว | |
 | agy | ✅ สำเร็จ / ❌ ล้มเหลว | |
+| Auto-query models (20 ตัว) | ✅ สำเร็จ / ❌ ล้มเหลว | |
 | Config | ✅ สำเร็จ / ❌ ล้มเหลว | |
 | Auto-start | ✅ สำเร็จ / ❌ ล้มเหลว | |
+
+### ผลการทดสอบฟีเจอร์
+| ฟีเจอร์ | สถานะ | หมายเหตุ |
+|---|---|---|
+| Hermes CLI | ✅ / ❌ | |
+| Hermes TUI | ✅ / ❌ | |
+| Hermes Dashboard | ✅ / ❌ | |
+| Hermes Desktop | ✅ / ❌ | |
+| Telegram Bot | ✅ / ❌ | |
+| Telegram /model (20 models) | ✅ / ❌ | |
+| agy | ✅ / ❌ | |
 
 ### ปัญหาที่เจอ
 1. ___
@@ -230,8 +266,8 @@ schtasks /Run /TN "HermesDashboard"
 
 ---
 
-## 📞 ติดต่อ
+##  ติดต่อ
 
-ถ้าเจอปัญหา แจ้งผู้สอนผ่านช่องทางที่กำหนดใน Course 0
+ถ้าเจอปัญหา แจ้งผู้สอนผ่านช่องทางที่กำหนดใน Course 0 หรือเปิด [GitHub Issue](https://github.com/pbseiya/hermes-windows-test/issues)
 
-ขอบคุณครับ! 🙏
+ขอบคุณครับ! 

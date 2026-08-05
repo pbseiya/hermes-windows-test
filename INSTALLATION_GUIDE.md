@@ -1,13 +1,15 @@
 # 📚 Installation Guide: Hermes Agent (Course 0)
 
-**Version:** 2.0 | **Updated:** 2026-07-24 | **Platform:** Windows Only
-**Total Time:** 6-14 minutes | **Admin Rights:** Not Required
+**Version:** 1.0.0 | **Updated:** 2026-08-05 | **Platform:** Windows Only
+**Total Time:** 10-20 minutes | **Admin Rights:** Not Required
 
 ---
 
 ## 🎯 Overview
 
 The installation is a fully automated **11-step script**. It requires **no admin privileges** (installs entirely in user-space). Users only need to run the script once and answer prompts when asked.
+
+**New in v1.0.0:** Auto-query 20 models from LiteLLM proxy, full UI support (Dashboard, Desktop, TUI).
 
 ---
 
@@ -19,11 +21,11 @@ The installation is a fully automated **11-step script**. It requires **no admin
 | **2. Install Git** | Portable Git v2.47.1+ | Downloads to `~/.local/git/` if missing. *(1-2 mins)* |
 | **3. Install Node.js** | v22.14.0+ portable | Downloads to `~/.local/node/` if missing. *(1-2 mins)* |
 | **4. Install Python** | 3.11.9 embeddable | Downloads to `~/.local/python/` if missing. *(1-2 mins)* |
-| **5. Install uv** | Python package manager | Installed via `irm https://astral.sh/uv/install.ps1 \| iex`. *(30s)* |
-| **6. Install Hermes Agent** | Main AI CLI + UI | Cloned to `%LOCALAPPDATA%\hermes\hermes-agent`, installed via `uv pip install -e '.[all]'`, npm dependencies built. *(2-4 mins)* |
+| **5. Install uv** | Python package manager | Installed via `irm https://astral.sh/uv/install.ps1 | iex`. *(30s)* |
+| **6. Install Hermes Agent** | Main AI CLI + UI | Cloned to `%LOCALAPPDATA%\hermes\hermes-agent`, installed via `uv pip install -e '.[all]'`, npm dependencies built. *(5-15 mins)* |
 | **7. Install Antigravity CLI** | Repair tool | `agy` (Gemini CLI). Requires initial Google login. *(30s-1m)* |
-| **8. Prompt for Credentials** | Ask user for keys | **LiteLLM API Key**, **Telegram Bot Token**, **Telegram Chat ID**. *Can press Enter to skip.* *(2-5 mins)* |
-| **9. Write Configuration** | Auto-write config files | Creates `%LOCALAPPDATA%\hermes\.env` and `config.yaml`. Auto-backs up existing files. *(5s)* |
+| **8. Prompt for Credentials** | Ask user for keys | **LiteLLM API Key**, **Telegram Bot Token**, **Telegram Chat ID**. *Can press Enter to skip.* **Auto-queries 20 models after API key entry.** *(2-5 mins)* |
+| **9. Write Configuration** | Auto-write config files | Creates `%LOCALAPPDATA%\hermes\.env` and `config.yaml` with all 20 models. Auto-backs up existing files. *(5s)* |
 | **10. Setup Auto-Start** | Configure boot services | Creates Windows Task Scheduler tasks: `HermesGateway` (30s delay), `HermesDashboard` (60s delay). Falls back to Startup Folder if Task Scheduler fails. *(2s)* |
 | **11. Start Gateway** | Launch Telegram Gateway | Gateway starts immediately after installation. *(2s)* |
 
@@ -87,10 +89,22 @@ HERMES_PYTHON=<path-to-venv-python>
 ### `config.yaml` File
 ```yaml
 model:
-  provider: custom:litellm
+  provider: litellm
   default: qwen3.7-plus
   base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
-  context_length: 1000000
+  api_key: <your-key>
+
+providers:
+  litellm:
+    api_key: <your-key>
+    base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
+    default_model: qwen3.7-plus
+    models:
+      qwen3.7-plus:
+        context_length: 1000000
+      qwen3.6-plus:
+        context_length: 1000000
+      # ... 18 more models auto-queried from proxy
 
 dashboard:
   enabled: true
@@ -116,10 +130,12 @@ telegram:
 - [ ] `hermes --version` executes successfully
 - [ ] `hermes` opens the CLI and responds to "สวัสดี"
 - [ ] `hermes doctor` shows no errors
-- [ ] `hermes model` displays current provider
+- [ ] `hermes model` displays 20 available models
+- [ ] `hermes --tui` opens the TUI interface
 - [ ] Dashboard is accessible at `http://localhost:9119`
 - [ ] `hermes desktop` opens the Electron app
 - [ ] Telegram bot replies (if token was provided)
+- [ ] Telegram `/model` shows 20 models
 - [ ] `agy` runs and prompts for Google login
 - [ ] All commands work from any directory (PATH verified)
 - [ ] Gateway auto-starts after reboot
@@ -177,10 +193,11 @@ All tools are added to the User PATH automatically. **You must open a new PowerS
 | **`hermes: command not found`** | PATH not loaded. **Fix:** Open a new PowerShell window, or use full path: `& "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"` |
 | **`Execution Policy`** | PowerShell blocks scripts. **Fix:** `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
 | **`agy: command not found`** | PATH not loaded or not logged in. **Fix:** Open new PowerShell, then run `agy` to login with Google. |
-| **Dashboard/Desktop not working** | Missing web build. **Fix:** Run `npm run build -w web` in `%LOCALAPPDATA%\hermes\hermes-agent` |
+| **Dashboard/Desktop not working** | Missing web build. **Fix:** Run `npm install --no-fund --no-audit && npm run build -w web` in `%LOCALAPPDATA%\hermes\hermes-agent` |
 | **Telegram bot not responding** | Gateway not running. **Fix:** `hermes gateway start` or `schtasks /Run /TN "HermesGateway"` |
 | **Services not starting after reboot** | Task Scheduler tasks missing. **Fix:** `schtasks /Run /TN "HermesGateway"` and `schtasks /Run /TN "HermesDashboard"` |
 | **Download fails** | Internet/Proxy issue. **Fix:** Check connection or configure corporate proxy. |
+| **Desktop shows errors on first launch** | Normal warnings (registry, WSL, session 404s). Harmless. Only investigate if window fails to open. |
 
 ---
 
@@ -188,4 +205,5 @@ All tools are added to the User PATH automatically. **You must open a new PowerS
 
 If issues persist:
 1. Read `TESTING_GUIDE.md` for detailed troubleshooting steps.
-2. Contact your instructor through the channel specified in Course 0.
+2. Check [GitHub Issues](https://github.com/pbseiya/hermes-windows-test/issues)
+3. Contact your instructor through the channel specified in Course 0.

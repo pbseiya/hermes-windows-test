@@ -26,9 +26,10 @@ powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.c
 5. ✅ Install **Hermes Agent** via uv + npm build (Dashboard, Desktop, TUI)
 6. ✅ Install **Antigravity CLI (agy)** for Gemini free tier
 7. ✅ Ask for **LiteLLM API Key**, **Telegram Bot Token**, and **Telegram Chat ID**
-8. ✅ Configure Hermes (`.env`, `config.yaml`) at `%LOCALAPPDATA%\hermes\`
-9. ✅ Setup auto-start with **Windows Task Scheduler** (Gateway 30s, Dashboard 60s)
-10. ✅ Start Telegram Gateway immediately
+8. ✅ **Auto-query 20 models** from LiteLLM proxy after API key entry
+9. ✅ Configure Hermes (`.env`, `config.yaml`) at `%LOCALAPPDATA%\hermes\` with all 20 models
+10. ✅ Setup auto-start with **Windows Task Scheduler** (Gateway 30s, Dashboard 60s)
+11. ✅ Start Telegram Gateway immediately
 
 ---
 
@@ -37,8 +38,9 @@ powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.c
 ### Core Commands
 ```powershell
 hermes              # Start CLI chat
+hermes --tui        # Start TUI (Terminal UI)
 hermes doctor       # Diagnose problems
-hermes model        # Change model/provider
+hermes model        # Change model (20 available)
 hermes dashboard    # Open web dashboard (http://localhost:9119)
 hermes desktop      # Launch Electron desktop app
 ```
@@ -64,9 +66,22 @@ hermes gateway restart
 
 ### Default Configuration
 - **Model:** `qwen3.7-plus` (1,000,000 token context)
-- **LiteLLM Proxy:** `https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1`
+- **Provider:** LiteLLM Proxy
+- **Base URL:** `https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1`
 - **Dashboard:** `http://localhost:9119`
 - **Security:** `approvals: off`, `redact_secrets: false`, `redact_pii: false`
+
+### Available Models (20 total)
+```
+qwen3.7-plus, qwen3.6-plus, qwen3.5-plus
+glm-5, glm-4.7
+kimi-k2.5, MiniMax-M2.5
+qwen3-coder-plus, qwen3-coder-next, qwen3-max-2026-01-23
+anthropic/qwen3.7-plus, anthropic/qwen3.6-plus, anthropic/qwen3.5-plus
+anthropic/glm-5, anthropic/glm-4.7, anthropic/kimi-k2.5
+anthropic/MiniMax-M2.5, anthropic/qwen3-coder-plus
+anthropic/qwen3-coder-next, anthropic/qwen3-max-2026-01-23
+```
 
 ---
 
@@ -93,6 +108,18 @@ notepad $env:LOCALAPPDATA\hermes\.env
 ```powershell
 hermes gateway restart
 hermes chat -q "สวัสดี"   # Test
+```
+
+---
+
+##  Telegram Bot Commands
+
+After setup, use these commands in Telegram:
+
+```text
+/model          # Switch between 20 models (inline button menu)
+/help           # Show available commands
+/sessions       # List active sessions
 ```
 
 ---
