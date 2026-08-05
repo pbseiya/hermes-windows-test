@@ -37,13 +37,33 @@ The installation is a fully automated **11-step script**. It requires **no admin
 ```powershell
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
 ```
+**Note:** Requires PowerShell execution policy to allow remote scripts. If blocked, use Method 2.
 
-### Method 2: CMD (Alternative)
+---
+
+### Method 2: Download then Run (Antivirus-friendly)
+```powershell
+# Step 1: Download script
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile "$env:TEMP\install.ps1"
+
+# Step 2: Run downloaded script
+powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1"
+```
+**Use this when:**
+- `irm | iex` is blocked by execution policy
+- Antivirus blocks inline script execution
+- Corporate network restricts remote script execution
+
+---
+
+### Method 3: CMD (Command Prompt)
 ```cmd
 powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex"
 ```
 
-### Method 3: Double-Click
+---
+
+### Method 4: Double-Click
 1. Download `quick-install.bat` from the repository
 2. Double-click to run
 

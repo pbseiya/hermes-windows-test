@@ -1,18 +1,38 @@
 # One-Line Install Commands
 
-## PowerShell (Recommended)
+## Method 1: PowerShell One-Liner (Recommended)
 ```powershell
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
 ```
+**Note:** Requires PowerShell execution policy to allow remote scripts. If blocked, use Method 2.
 
-## Alternative: Download and Run
+---
+
+## Method 2: Download then Run (Antivirus-friendly)
 ```powershell
-$f="$env:TEMP\hermes-install.ps1"; irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f; Remove-Item $f
-```
+# Step 1: Download script
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile "$env:TEMP\install.ps1"
 
-## CMD (Command Prompt)
+# Step 2: Run downloaded script
+powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1"
+```
+**Use this when:**
+- `irm | iex` is blocked by execution policy
+- Antivirus blocks inline script execution
+- Corporate network restricts remote script execution
+
+---
+
+## Method 3: CMD (Command Prompt)
 ```cmd
 powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex"
+```
+
+---
+
+## Method 4: Alternative One-Liner (Download + Run + Cleanup)
+```powershell
+$f="$env:TEMP\hermes-install.ps1"; irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f; Remove-Item $f
 ```
 
 ---

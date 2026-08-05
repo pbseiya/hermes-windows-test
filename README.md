@@ -29,6 +29,23 @@ This repository provides automated installation scripts, guides, and course mate
 *   **Environment:** All installation commands must be run in **PowerShell**.
 *   **Uninstall Time:** Takes ~2-3 minutes (utilizes parallel fast deletion for all `node_modules`).
 
+### Installation Methods
+
+**Method 1: PowerShell One-Liner (Recommended)**
+```powershell
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
+```
+
+**Method 2: Download then Run (Antivirus-friendly)**
+```powershell
+# Step 1: Download script
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile "$env:TEMP\install.ps1"
+
+# Step 2: Run downloaded script
+powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1"
+```
+Use Method 2 when `irm | iex` is blocked by execution policy or antivirus.
+
 ### Viewing Long Logs
 
 If the installation/uninstallation log is too long to scroll:
