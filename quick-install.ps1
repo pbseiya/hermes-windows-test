@@ -54,23 +54,41 @@ Write-Host '   - Trend Micro Apex One' -ForegroundColor Yellow
 Write-Host '   - Windows Defender (Set-MpPreference -DisableRealtimeMonitoring $true)' -ForegroundColor Yellow
 Write-Host ''
 
-# Auto-detect antivirus status
+# Auto-detect antivirus status using Windows Security Center
 $avWarnings = @()
-$trendMicro = Get-Process -Name 'TmListen','TmPfw','Tmntsrv' -ErrorAction SilentlyContinue
-if ($trendMicro) {
-    $avWarnings += 'Trend Micro is running!'
+
+# Query all registered antivirus products via WMI
+$avProducts = Get-CimInstance -Namespace "root\SecurityCenter2" -ClassName AntiVirusProduct -ErrorAction SilentlyContinue
+
+if ($avProducts) {
+    foreach ($av in $avProducts) {
+        $avName = $av.displayName
+        # Check if real-time protection is enabled (bitmask check)
+        # 0x00000 = disabled, 0x00010 = enabled, 0x10000 = snoozed
+        $state = $av.productState
+        
+        if ($state -eq 266240 -or $state -eq 262144) {
+            # 266240 = 0x41000 (enabled), 262144 = 0x40000 (enabled but snoozed)
+            $avWarnings += "$avName is running"
+        }
+    }
 }
+
+# Also check Windows Defender specifically (more reliable)
 $defender = Get-MpPreference -ErrorAction SilentlyContinue
 if ($defender -and $defender.DisableRealtimeMonitoring -eq $false) {
-    $avWarnings += 'Windows Defender real-time protection is ON!'
+    if (-not ($avWarnings -match "Windows Defender")) {
+        $avWarnings += 'Windows Defender real-time protection is ON'
+    }
 }
+
 if ($avWarnings.Count -gt 0) {
     Write-Host ''
     Write-Host '❌ WARNING: Antivirus detected!' -ForegroundColor Red
-    foreach ($w in $avWarnings) { Write-Host "   $w" -ForegroundColor Red }
+    foreach ($w in $avWarnings) { Write-Host "   • $w" -ForegroundColor Red }
     Write-Host ''
     Write-Host '   Installation may FAIL if antivirus is active.' -ForegroundColor Red
-    Write-Host '   We recommend disabling antivirus before continuing.' -ForegroundColor Red
+    Write-Host '   We recommend disabling ALL antivirus before continuing.' -ForegroundColor Red
     Write-Host ''
     
     $response = Read-Host 'Continue anyway? (y/N)'
