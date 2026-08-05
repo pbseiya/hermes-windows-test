@@ -765,6 +765,31 @@ $LiteLLMKey = Read-Host 'Paste LiteLLM API Key (or press Enter to skip)'
 
 if (-not [string]::IsNullOrWhiteSpace($LiteLLMKey)) {
     Write-Ok 'Received LiteLLM API Key'
+
+    # Query available models from LiteLLM proxy
+    Write-Info 'Querying available models from LiteLLM proxy...'
+    $LiteLLMModels = @()
+    try {
+        $headers = @{ 'Authorization' = "Bearer $LiteLLMKey" }
+        $modelsResponse = Invoke-WebRequest -Uri 'https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1/models' -Headers $headers -UseBasicParsing -TimeoutSec 15
+        $modelsData = $modelsResponse.Content | ConvertFrom-Json
+        if ($modelsData.data) {
+            foreach ($m in $modelsData.data) {
+                if ($m.id) {
+                    $LiteLLMModels += $m.id
+                }
+            }
+        }
+        if ($LiteLLMModels.Count -gt 0) {
+            Write-Ok "Found $($LiteLLMModels.Count) models: $($LiteLLMModels -join ', ')"
+        }
+        else {
+            Write-Warn 'No models returned -- Using default model list'
+        }
+    }
+    catch {
+        Write-Warn "Failed to query models: $_ -- Using default model list"
+    }
 }
 else {
     Write-Warn 'Skipping LiteLLM API Key -- Can use hermes setup later'
@@ -878,6 +903,33 @@ if (Test-Path $configFile) {
     Write-Info 'Backed up original config.yaml'
 }
 
+# Build models section for config.yaml
+$modelsSection = ""
+if ($LiteLLMModels.Count -gt 0) {
+    # Use queried models
+    foreach ($modelId in $LiteLLMModels) {
+        $safeId = $modelId -replace '/', '-'
+        $modelsSection += "      ${modelId}:`n"
+        $modelsSection += "        context_length: 1000000`n"
+    }
+}
+else {
+    # Fallback: default models
+    $defaultModels = @(
+        'qwen3.7-plus', 'qwen3.6-plus', 'qwen3.5-plus',
+        'glm-5', 'glm-4.7', 'kimi-k2.5', 'MiniMax-M2.5',
+        'qwen3-coder-plus', 'qwen3-coder-next', 'qwen3-max-2026-01-23',
+        'anthropic/qwen3.7-plus', 'anthropic/qwen3.6-plus', 'anthropic/qwen3.5-plus',
+        'anthropic/glm-5', 'anthropic/glm-4.7', 'anthropic/kimi-k2.5',
+        'anthropic/MiniMax-M2.5', 'anthropic/qwen3-coder-plus',
+        'anthropic/qwen3-coder-next', 'anthropic/qwen3-max-2026-01-23'
+    )
+    foreach ($modelId in $defaultModels) {
+        $modelsSection += "      ${modelId}:`n"
+        $modelsSection += "        context_length: 1000000`n"
+    }
+}
+
 $configContent = @"
 # Hermes Agent Configuration
 # Configured by quick-install.ps1 at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
@@ -893,9 +945,7 @@ providers:
     base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
     default_model: qwen3.7-plus
     models:
-      qwen3.7-plus:
-        context_length: 1000000
-    transport: openai_chat
+$($modelsSection)    transport: openai_chat
 
 # Dashboard
 dashboard:
@@ -918,7 +968,12 @@ privacy:
 "@
 
 [System.IO.File]::WriteAllText($configFile, $configContent, [System.Text.UTF8Encoding]::new($false))
-Write-Ok 'Create config.yaml (using LiteLLM Proxy + qwen3.7-plus)'
+if ($LiteLLMModels.Count -gt 0) {
+    Write-Ok "Create config.yaml (LiteLLM Proxy + $($LiteLLMModels.Count) models)"
+}
+else {
+    Write-Ok 'Create config.yaml (using LiteLLM Proxy + qwen3.7-plus)'
+}
 Write-Ok 'Configured: approvals=off, reactions=true, redact_secrets=false, redact_pii=false'
 Write-Ok 'Dashboard: http://localhost:9119'
 
@@ -1116,7 +1171,12 @@ Write-Host '  - Hermes -> %LOCALAPPDATA%\hermes\hermes-agent (git clone)' -Foreg
 Write-Host '  - agy -> ~/AppData/Local/agy/bin/' -ForegroundColor White
 Write-Host ''
 Write-Host 'Configuration:' -ForegroundColor Cyan
-Write-Host '  - Model: qwen3.7-plus (via LiteLLM Proxy)' -ForegroundColor White
+if ($LiteLLMModels.Count -gt 0) {
+    Write-Host "  - Models: $($LiteLLMModels.Count) available via LiteLLM Proxy" -ForegroundColor White
+}
+else {
+    Write-Host '  - Model: qwen3.7-plus (via LiteLLM Proxy)' -ForegroundColor White
+}
 Write-Host '  - Dashboard: http://localhost:9119' -ForegroundColor White
 if (-not [string]::IsNullOrWhiteSpace($TelegramToken)) {
     Write-Host '  - Telegram: Ready to use' -ForegroundColor Green
