@@ -6,9 +6,10 @@ After completing this module, you will be able to:
 
 1. Install Hermes Agent on Windows (no admin rights required)
 2. Configure LiteLLM API Key and Telegram Bot
-3. Access the Web Dashboard
-4. Change API Key after installation
-5. Troubleshoot common installation issues
+3. Use all 5 interfaces: CLI, TUI, Dashboard, Desktop, Telegram
+4. Use agy (Antigravity CLI) for repairs
+5. Change API Key and models after installation
+6. Troubleshoot common installation issues
 
 ---
 
@@ -55,10 +56,20 @@ The script installs these components in user-space:
 | **Node.js v22** (portable) | Dashboard & Desktop |
 | **Python 3.11** (embeddable) | Hermes runtime |
 | **uv** | Python package manager |
-| **Hermes Agent** | AI assistant + Gateway + Dashboard |
-| **Antigravity CLI (agy)** | Repair tool |
+| **Hermes Agent** | AI assistant + Gateway + Dashboard + Desktop + TUI |
+| **Antigravity CLI (agy)** | Repair tool (Gemini free tier) |
 
 **All installed in:** `%LOCALAPPDATA%\hermes\` (no admin required)
+
+### Installation Time
+
+| Phase | Time |
+|-------|------|
+| Prerequisites (Git, Node, Python, uv) | 3-5 min |
+| Hermes Agent (Python + npm) | 5-15 min |
+| Web UI build (Dashboard) | 1-2 min |
+| Desktop build (Electron) | 3-5 min |
+| **Total** | **10-20 min** |
 
 ---
 
@@ -79,6 +90,7 @@ During installation, you'll be prompted for:
 ### 1. LiteLLM API Key
 - Provided by instructor
 - Press Enter to skip (can add later)
+- **After entering key, the script auto-queries 20 available models from LiteLLM proxy**
 
 ### 2. Telegram Bot Token
 - Create bot via @BotFather
@@ -89,7 +101,7 @@ During installation, you'll be prompted for:
 - Get from @userinfobot
 - Restricts bot access to you only
 
-**Can skip all prompts** and configure later (see Step 6).
+**Can skip all prompts** and configure later (see Step 7).
 
 ---
 
@@ -115,46 +127,210 @@ If `hermes` command not found, try:
 
 ---
 
-## 🌐 Step 4: Access Dashboard
+## 🖥️ Step 4: Five Ways to Use Hermes
+
+Hermes Agent provides **5 different interfaces** for different use cases:
+
+### 1. Hermes CLI (Terminal Chat)
+
+The classic command-line interface for direct chat with the agent.
+
+```powershell
+hermes
+```
+
+![Hermes CLI](images/hermes-cli.png)
+
+**Features:**
+- Interactive chat with reasoning display
+- 29 tools + 62 skills available
+- Session management
+- Model switching with `/model`
+
+---
+
+### 2. Hermes TUI (Terminal UI)
+
+Modern terminal UI with rich interface inside your terminal.
+
+```powershell
+hermes --tui
+```
+
+**Features:**
+- Modern TUI with panels and navigation
+- Works inside any terminal
+- No browser required
+- Full tool and skill access
+
+---
+
+### 3. Hermes Dashboard (Web UI)
+
+Web-based dashboard accessible via browser.
 
 ```powershell
 hermes dashboard
 ```
 
-Opens at: `http://localhost:9119`
+Opens at: **http://localhost:9119**
 
-Features:
-- Session history
+![Hermes Dashboard](images/hermes-dashboard.png)
+
+**Features:**
+- Session history and management
 - Cron jobs management
-- Tools & skills
+- Tools & skills browser
 - Configuration viewer
 - Usage statistics
+- Models page (20 models available)
+- Channels, Plugins, MCP servers management
+- Embedded TUI terminal
 
 ---
 
-## 🤖 Step 5: Telegram Integration
+### 4. Hermes Desktop (Native App)
 
-### Start Gateway
+Electron-based native desktop application.
+
+```powershell
+hermes desktop
+```
+
+![Hermes Desktop](images/hermes-desktop.png)
+
+**Features:**
+- Native window experience
+- All Dashboard features
+- Integrated terminal
+- Pet animations
+- Voice input support
+- Multi-session tabs
+
+---
+
+### 5. Telegram Gateway
+
+Messaging platform integration for chat via Telegram.
 
 ```powershell
 hermes gateway start
 ```
 
-### Auto-start Behavior
+![Telegram Bot](images/telegram-bot.png)
 
-Gateway starts automatically after reboot via Windows Task Scheduler:
-- `HermesGateway` task (30s delay)
-- `HermesDashboard` task (60s delay)
+**Features:**
+- Chat via Telegram bot
+- Auto-start after reboot (Task Scheduler)
+- Model switching with `/model` command (20 models)
+- Session management
+- Cron job delivery to Telegram
 
-### Manual Start (if needed)
+**Auto-start Behavior:**
+- `HermesGateway` task (30s delay after login)
+- `HermesDashboard` task (60s delay after login)
 
+**Manual Start (if needed):**
 ```powershell
 schtasks /Run /TN "HermesGateway"
 ```
 
 ---
 
-## 🔑 Step 6: Change API Key After Installation
+## 🔧 Step 5: Antigravity CLI (agy)
+
+`agy` is a repair tool powered by Google Gemini (free tier). Use it when Hermes has problems.
+
+```powershell
+agy
+```
+
+![Antigravity CLI](images/agy-cli.png)
+
+**Features:**
+- Free Gemini 3.1 Pro access
+- Fix broken Hermes installations
+- Repair configuration issues
+- Diagnose problems
+
+**First Run:**
+- Requires Google Account login
+- Free tier has rate limits (enough for repairs)
+
+**Common Uses:**
+```powershell
+agy fix                    # Auto-fix common issues
+agy doctor                 # Diagnose problems
+agy repair hermes          # Repair Hermes installation
+```
+
+---
+
+## 🧠 Step 6: Model Configuration
+
+### Default Setup
+
+- **Model:** `qwen3.7-plus`
+- **Provider:** LiteLLM Proxy
+- **Context Length:** 1,000,000 tokens
+- **Base URL:** `https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1`
+
+### Auto-Queried Models (20 available)
+
+The install script automatically queries the LiteLLM proxy and configures all available models:
+
+| # | Model | # | Model |
+|---|-------|---|-------|
+| 1 | qwen3.7-plus | 11 | anthropic/qwen3.7-plus |
+| 2 | qwen3.6-plus | 12 | anthropic/qwen3.6-plus |
+| 3 | qwen3.5-plus | 13 | anthropic/qwen3.5-plus |
+| 4 | glm-5 | 14 | anthropic/glm-5 |
+| 5 | glm-4.7 | 15 | anthropic/glm-4.7 |
+| 6 | kimi-k2.5 | 16 | anthropic/kimi-k2.5 |
+| 7 | MiniMax-M2.5 | 17 | anthropic/MiniMax-M2.5 |
+| 8 | qwen3-coder-plus | 18 | anthropic/qwen3-coder-plus |
+| 9 | qwen3-coder-next | 19 | anthropic/qwen3-coder-next |
+| 10 | qwen3-max-2026-01-23 | 20 | anthropic/qwen3-max-2026-01-23 |
+
+### Switch Models
+
+**In CLI/TUI:**
+```text
+/model qwen3.6-plus
+/model anthropic/glm-5
+```
+
+**In Telegram:**
+```text
+/model
+```
+Then select from the inline button menu (shows all 20 models).
+
+**In Dashboard:**
+Click the model dropdown in the top-right corner.
+
+---
+
+## 🔒 Step 7: Security Settings
+
+Default configuration (Course 0):
+
+```yaml
+approvals:
+  mode: off              # No command approval needed
+telegram:
+  reactions: true        # Auto-react to messages
+security:
+  redact_secrets: false  # Don't hide secrets in logs
+privacy:
+  redact_pii: false      # Don't hide personal info
+```
+
+**Note:** These settings are relaxed for training. Adjust for production use.
+
+---
+
+## 🔑 Step 8: Change API Key After Installation
 
 If you skipped the API key during installation or need to change it:
 
@@ -192,53 +368,7 @@ hermes chat -q "สวัสดี"   # Test
 
 ---
 
-## 🧠 Step 7: Model Configuration
-
-### Default Setup
-
-- **Model:** `qwen3.7-plus`
-- **Provider:** LiteLLM Proxy
-- **Context Length:** 1,000,000 tokens
-- **Base URL:** `https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1`
-
-### Switch Models (Temporary)
-
-```text
-/model anthropic/claude-sonnet-4
-/model openai/gpt-4o
-```
-
-### Model Comparison
-
-| Model | Best For | Cost |
-|-------|----------|------|
-| **qwen3.7-plus** | General tasks | Free (Course 0) |
-| Claude Sonnet 4 | Balanced performance | Paid |
-| GPT-4o | Fast responses | Paid |
-| Claude Opus 4 | Complex reasoning | Paid |
-
----
-
-## 🔒 Step 8: Security Settings
-
-Default configuration (Course 0):
-
-```yaml
-approvals:
-  mode: off              # No command approval needed
-telegram:
-  reactions: true        # Auto-react to messages
-security:
-  redact_secrets: false  # Don't hide secrets in logs
-privacy:
-  redact_pii: false      # Don't hide personal info
-```
-
-**Note:** These settings are relaxed for training. Adjust for production use.
-
----
-
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Problem 1: `hermes` Command Not Found
 
@@ -254,14 +384,24 @@ privacy:
 **Cause:** Antivirus blocked npm during installation
 
 **Solution:**
-Run:
 ```powershell
 cd %LOCALAPPDATA%\hermes\hermes-agent
+npm install --no-fund --no-audit
 npm run build -w web
 ```
 Then restart: `hermes dashboard`
 
-### Problem 3: Telegram Bot Not Responding
+### Problem 3: Desktop Shows Errors on First Launch
+
+**Normal warnings (harmless):**
+- `[DIRTY] from local` — Git working tree not clean at build time
+- `registry key not found` — Optional Windows registry lookup
+- `WSL is not installed` — Informational, Hermes doesn't need WSL
+- `Session not found (404)` — Race condition at startup, self-heals
+
+**Only investigate if:** Desktop window fails to open or shows blank screen.
+
+### Problem 4: Telegram Bot Not Responding
 
 **Check:**
 ```powershell
@@ -275,7 +415,7 @@ type %LOCALAPPDATA%\hermes\logs\gateway.log
 hermes gateway restart
 ```
 
-### Problem 4: Services Not Starting After Reboot
+### Problem 5: Services Not Starting After Reboot
 
 **Check Task Scheduler:**
 ```powershell
@@ -286,9 +426,15 @@ schtasks /Query /TN "HermesDashboard"
 **Manual start:**
 ```powershell
 schtasks /Run /TN "HermesGateway"
+schtasks /Run /TN "HermesDashboard"
 ```
 
-### Problem 5: API Key Issues
+**Fallback:** Check Startup Folder:
+```
+%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup
+```
+
+### Problem 6: API Key Issues
 
 **Solution:**
 ```powershell
@@ -309,9 +455,11 @@ hermes gateway restart
 | File | Purpose |
 |------|---------|
 | `README.md` | Quick start guide |
+| `CHANGELOG.md` | Version history |
 | `INSTALLATION_GUIDE.md` | Detailed installation steps |
 | `TESTING_GUIDE.md` | Post-install checklist |
 | `ONE_LINE_COMMANDS.md` | Command reference |
+| [Releases](https://github.com/pbseiya/hermes-windows-test/releases) | Download releases |
 
 ---
 
@@ -319,8 +467,9 @@ hermes gateway restart
 
 If you encounter issues:
 1. Check `TESTING_GUIDE.md` for troubleshooting
-2. Contact instructor via course channel
+2. Check [GitHub Issues](https://github.com/pbseiya/hermes-windows-test/issues)
+3. Contact instructor via course channel
 
 ---
 
-**Module completed:** You can now install, configure, and troubleshoot Hermes Agent on Windows!
+**Module completed:** You can now install, configure, and use all 5 Hermes interfaces on Windows!
