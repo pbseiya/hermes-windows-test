@@ -417,11 +417,19 @@ if (-not $SkipInstall) {
         Write-Info 'Installing Python 3.11 via uv...'
         uv python install 3.11 2>&1 | Out-Null
         
-        # Create venv using uv-managed Python
+        # Create venv using uv-managed Python (use python -m venv instead of uv venv to avoid trampoline issue)
         $venvDir = Join-Path $hermesInstallDir 'venv'
         if (-not (Test-Path $venvDir)) {
-            Write-Info 'Creating virtual environment...'
-            uv venv venv --python 3.11
+            Write-Info 'Creating virtual environment with Python 3.11...'
+            # Get uv-managed Python path
+            $uvPythonPath = uv python find 3.11
+            # Use python -m venv instead of uv venv (avoids trampoline .exe that AV blocks)
+            & $uvPythonPath -m venv $venvDir
+            if ($LASTEXITCODE -ne 0) {
+                Write-Err "Failed to create virtual environment"
+                throw "venv creation failed"
+            }
+            Write-Ok 'Virtual environment created'
         }
         
         # Activate venv
