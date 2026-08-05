@@ -246,71 +246,9 @@ else {
     Write-Err 'Node.js installation failed'
 }
 
-# 1.6 Python 3.10+ (standalone or embeddable)
-
-# Refresh PATH again to get previously installed Python
-$env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
-
-$pythonIsValid = Test-PythonValid
-if (-not $pythonIsValid) {
-    Write-Warn 'Python 3 not found (or Windows Store alias detected) -- Installing in user-space...'
-
-    # Download Python embeddable package
-    $pythonDir = Join-Path $env:USERPROFILE '.local\python'
-    if (-not (Test-Path $pythonDir)) { New-Item -ItemType Directory -Path $pythonDir -Force | Out-Null }
-
-    $pythonUrl = 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip'
-    $pythonZip = Join-Path $pythonDir 'python.zip'
-
-    Write-Info 'Downloading Python embeddable...'
-    try {
-        Invoke-WebRequest -Uri $pythonUrl -OutFile $pythonZip -UseBasicParsing
-        Write-Info 'Extracting Python...'
-        Expand-Archive -Path $pythonZip -DestinationPath $pythonDir -Force
-        Remove-Item -Path $pythonZip -Force
-
-        # Enable import site by fixing python311._pth (required for uv)
-        $pthFile = Join-Path $pythonDir 'python311._pth'
-        if (Test-Path $pthFile) {
-            $pthContent = Get-Content $pthFile
-            $pthContent = $pthContent -replace '#import site', 'import site'
-            [System.IO.File]::WriteAllText($pthFile, ($pthContent -join "`r`n"))
-        }
-
-        # Add Python to PATH (no pip needed - uv handles dependencies)
-        $env:Path = $pythonDir + ';' + $env:Path
-        $userPath = [System.Environment]::GetEnvironmentVariable('Path', 'User')
-        if ($userPath -notlike "*$pythonDir*") {
-            [System.Environment]::SetEnvironmentVariable('Path', ($pythonDir + ';' + $userPath), 'User')
-        }
-
-        Write-Ok 'Python embeddable installed'
-    }
-    catch {
-        Write-Err "Python installation failed: $_`nPlease check your internet connection and try again.`nOr download manually from: https://python.org/downloads/"
-    }
-}
-
-# Check Python version (using validation function to skip Windows Store aliases)
-$pythonIsValid = Test-PythonValid
-
-if ($pythonIsValid) {
-    $prevEAP = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $pythonVer = (python --version 2>&1) -replace 'Python ', ''
-    $ErrorActionPreference = $prevEAP
-    $pythonParts = $pythonVer -split '\.'
-    $pythonMajor = [int]$pythonParts[0]
-    $pythonMinor = [int]$pythonParts[1]
-
-    if ($pythonMajor -lt 3 -or ($pythonMajor -eq 3 -and $pythonMinor -lt 10)) {
-        Write-Err "Python must be 3.10 or higher (current: $pythonVer)"
-    }
-    Write-Ok "Python $pythonVer"
-}
-else {
-    Write-Err 'Python installation failed'
-}
+# 1.6 Python 3.11 (installed via uv - matches official hermes installer)
+# Skip Python installation here - will be handled by uv after uv is installed
+# This avoids antivirus issues with Python embeddable + trampoline .exe files
 
 # =============================================================================
 # Step 2: Install uv (Python package manager)
@@ -468,9 +406,15 @@ if (-not $SkipInstall) {
     try {
         Push-Location $hermesInstallDir
         
-        # Create venv if not exists
+        # Install Python 3.11 via uv (matches official hermes installer)
+        # This avoids antivirus issues with Python embeddable + trampoline .exe
+        Write-Info 'Installing Python 3.11 via uv...'
+        uv python install 3.11 2>&1 | Out-Null
+        
+        # Create venv using uv-managed Python
         $venvDir = Join-Path $hermesInstallDir 'venv'
         if (-not (Test-Path $venvDir)) {
+            Write-Info 'Creating virtual environment...'
             uv venv venv --python 3.11
         }
         
@@ -479,32 +423,30 @@ if (-not $SkipInstall) {
         $venvPythonPath = Join-Path $venvScripts 'python.exe'
         $env:Path = $venvScripts + ';' + $env:Path
         
-        # Install hermes with all extras (Python)
-        # Use --link-mode=copy to avoid uv trampoline .exe files that antivirus blocks
+        # Tiered install (matches official hermes installer)
+        # Try full install first, fall back to smaller sets if rate-limited
         Write-Info 'Installing hermes-agent Python packages...'
-        $env:UV_LINK_MODE = 'copy'
-        
-        # Retry uv pip install up to 3 times (antivirus may block trampoline creation)
+        $installSets = @('[all]', '[messaging,dashboard,ext]', '[messaging]', '')
         $uvOk = $false
-        for ($uvAttempt = 1; $uvAttempt -le 3; $uvAttempt++) {
-            Write-Info "  uv pip install attempt $uvAttempt/3..."
+        
+        foreach ($extra in $installSets) {
+            $package = if ($extra) { ".$extra" } else { "." }
+            Write-Info "  Trying uv pip install -e $package..."
             $prevEAP = $ErrorActionPreference
             $ErrorActionPreference = 'Continue'
-            uv pip install -e '.[all]' --link-mode=copy --quiet 2>&1 | Out-Null
+            uv pip install -e $package --quiet 2>&1 | Out-Null
             $ErrorActionPreference = $prevEAP
+            
             if ($LASTEXITCODE -eq 0) {
                 $uvOk = $true
+                Write-Ok "Python packages installed ($package)"
                 break
-            }
-            if ($uvAttempt -lt 3) {
-                Write-Warn "  Failed -- waiting 10s before retry..."
-                Start-Sleep -Seconds 10
+            } else {
+                Write-Warn "  Failed with $package -- trying smaller set..."
             }
         }
         
-        if ($uvOk) {
-            Write-Ok 'Python packages installed'
-        } else {
+        if (-not $uvOk) {
             Write-Warn 'Python packages install had issues -- hermes may not work'
         }
 
