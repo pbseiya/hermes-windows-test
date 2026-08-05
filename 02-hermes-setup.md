@@ -139,7 +139,7 @@ The classic command-line interface for direct chat with the agent.
 hermes
 ```
 
-![Hermes CLI](images/hermes-cli.png)
+<p align="center"><img src="images/hermes-cli.png" alt="Hermes CLI" /></p>
 
 **Features:**
 - Interactive chat with reasoning display
@@ -175,7 +175,7 @@ hermes dashboard
 
 Opens at: **http://localhost:9119**
 
-![Hermes Dashboard](images/hermes-dashboard.png)
+<p align="center"><img src="images/hermes-dashboard.png" alt="Hermes Dashboard" /></p>
 
 **Features:**
 - Session history and management
@@ -197,7 +197,7 @@ Electron-based native desktop application.
 hermes desktop
 ```
 
-![Hermes Desktop](images/hermes-desktop.png)
+<p align="center"><img src="images/hermes-desktop.png" alt="Hermes Desktop" /></p>
 
 **Features:**
 - Native window experience
@@ -217,7 +217,7 @@ Messaging platform integration for chat via Telegram.
 hermes gateway start
 ```
 
-![Telegram Bot](images/telegram-bot.png)
+<p align="center"><img src="images/telegram-bot.png" alt="Telegram Bot" /></p>
 
 **Features:**
 - Chat via Telegram bot
@@ -245,7 +245,7 @@ schtasks /Run /TN "HermesGateway"
 agy
 ```
 
-![Antigravity CLI](images/agy-cli.png)
+<p align="center"><img src="images/agy-cli.png" alt="Antigravity CLI" /></p>
 
 **Features:**
 - Free Gemini 3.1 Pro access
