@@ -63,22 +63,32 @@ $avProducts = Get-CimInstance -Namespace "root\SecurityCenter2" -ClassName AntiV
 if ($avProducts) {
     foreach ($av in $avProducts) {
         $avName = $av.displayName
-        # Check if real-time protection is enabled (bitmask check)
-        # 0x00000 = disabled, 0x00010 = enabled, 0x10000 = snoozed
         $state = $av.productState
         
-        if ($state -eq 266240 -or $state -eq 262144) {
-            # 266240 = 0x41000 (enabled), 262144 = 0x40000 (enabled but snoozed)
-            $avWarnings += "$avName is running"
+        # Decode productState bitmask
+        # High byte (0xFF0000): AV state - 0x00=up-to-date, 0x01=outdated, 0x10=snoozed
+        # Middle byte (0x00FF00): Real-time status - 0x00=off, 0x01=on, 0x10=expired
+        # Low byte (0x0000FF): Signature status - 0x00=up-to-date, 0x01=outdated
+        
+        $realTimeStatus = ($state -band 0x00FF00) >> 8  # Extract middle byte
+        
+        # Check if real-time protection is active
+        # 0x01 = enabled, 0x00 = disabled, 0x10 = snoozed/expired
+        if ($realTimeStatus -eq 1) {
+            $avWarnings += "$avName is running (state: $state)"
         }
     }
 }
 
-# Also check Windows Defender specifically (more reliable)
-$defender = Get-MpPreference -ErrorAction SilentlyContinue
-if ($defender -and $defender.DisableRealtimeMonitoring -eq $false) {
-    if (-not ($avWarnings -match "Windows Defender")) {
-        $avWarnings += 'Windows Defender real-time protection is ON'
+# Also check Windows Defender service status (more reliable)
+$defenderService = Get-Service -Name 'WinDefend' -ErrorAction SilentlyContinue
+if ($defenderService -and $defenderService.Status -eq 'Running') {
+    # Check if real-time protection is enabled
+    $defender = Get-MpPreference -ErrorAction SilentlyContinue
+    if ($defender -and $defender.DisableRealtimeMonitoring -eq $false) {
+        if (-not ($avWarnings -match "Windows Defender")) {
+            $avWarnings += 'Windows Defender real-time protection is ON'
+        }
     }
 }
 
