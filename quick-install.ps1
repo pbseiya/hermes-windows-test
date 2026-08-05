@@ -413,18 +413,30 @@ if (-not $SkipInstall) {
         Push-Location $hermesInstallDir
         
         # Install Python 3.11 via uv (matches official hermes installer)
-        # This avoids antivirus issues with Python embeddable + trampoline .exe
-        Write-Info 'Installing Python 3.11 via uv...'
-        uv python install 3.11 2>&1 | Out-Null
+        # Check if Python 3.11 is already installed
+        Write-Info 'Checking Python 3.11...'
+        $pythonInstalled = $false
+        $pythonList = uv python list 2>&1
+        if ($pythonList -match '3\.11') {
+            Write-Ok 'Python 3.11 already installed'
+            $pythonInstalled = $true
+        }
         
-        # Create venv using uv-managed Python (use python -m venv instead of uv venv to avoid trampoline issue)
+        if (-not $pythonInstalled) {
+            Write-Info 'Installing Python 3.11 via uv...'
+            uv python install 3.11
+            if ($LASTEXITCODE -ne 0) {
+                Write-Err "Failed to install Python 3.11"
+                throw "Python installation failed"
+            }
+            Write-Ok 'Python 3.11 installed'
+        }
+        
+        # Create venv using uv venv (matches official hermes installer)
         $venvDir = Join-Path $hermesInstallDir 'venv'
         if (-not (Test-Path $venvDir)) {
             Write-Info 'Creating virtual environment with Python 3.11...'
-            # Get uv-managed Python path
-            $uvPythonPath = uv python find 3.11
-            # Use python -m venv instead of uv venv (avoids trampoline .exe that AV blocks)
-            & $uvPythonPath -m venv $venvDir
+            uv venv $venvDir --python 3.11
             if ($LASTEXITCODE -ne 0) {
                 Write-Err "Failed to create virtual environment"
                 throw "venv creation failed"
@@ -446,17 +458,18 @@ if (-not $SkipInstall) {
         foreach ($extra in $installSets) {
             $package = if ($extra) { ".$extra" } else { "." }
             Write-Info "  Trying uv pip install -e $package..."
-            $prevEAP = $ErrorActionPreference
-            $ErrorActionPreference = 'Continue'
-            uv pip install -e $package --quiet 2>&1 | Out-Null
-            $ErrorActionPreference = $prevEAP
+            uv pip install -e $package
+            $exitCode = $LASTEXITCODE
             
-            if ($LASTEXITCODE -eq 0) {
+            if ($exitCode -eq 0) {
                 $uvOk = $true
                 Write-Ok "Python packages installed ($package)"
                 break
             } else {
-                Write-Warn "  Failed with $package -- trying smaller set..."
+                Write-Warn "  Failed with exit code $exitCode"
+                if ($extra -ne '') {
+                    Write-Info "  Trying smaller package set..."
+                }
             }
         }
         
