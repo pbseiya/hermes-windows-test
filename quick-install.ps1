@@ -70,9 +70,15 @@ if ($avWarnings.Count -gt 0) {
     foreach ($w in $avWarnings) { Write-Host "   $w" -ForegroundColor Red }
     Write-Host ''
     Write-Host '   Installation may FAIL if antivirus is active.' -ForegroundColor Red
-    Write-Host '   Press Ctrl+C to cancel and disable antivirus first.' -ForegroundColor Red
+    Write-Host '   We recommend disabling antivirus before continuing.' -ForegroundColor Red
     Write-Host ''
-    Start-Sleep -Seconds 5
+    
+    $response = Read-Host 'Continue anyway? (y/N)'
+    if ($response -ne 'y' -and $response -ne 'Y') {
+        Write-Host ''
+        Write-Host 'Installation cancelled. Please disable antivirus and try again.' -ForegroundColor Yellow
+        exit 0
+    }
 }
 
 # --- Detect Environment ---
