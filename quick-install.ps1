@@ -227,7 +227,6 @@ else {
     Write-Err 'Node.js installation failed'
 }
 
-<<<<<<< HEAD
 # 1.6 Python 3.10+ (standalone or embeddable)
 
 # Refresh PATH again to get previously installed Python
