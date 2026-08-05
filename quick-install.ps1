@@ -67,27 +67,15 @@ if ($avProducts) {
         
         # Decode productState bitmask
         # High byte (0xFF0000): AV state - 0x00=up-to-date, 0x01=outdated, 0x10=snoozed
-        # Middle byte (0x00FF00): Real-time status - 0x00=off, 0x01=on, 0x10=expired
+        # Middle byte (0x00FF00): Real-time status - 0x00=off, 0x01=on
         # Low byte (0x0000FF): Signature status - 0x00=up-to-date, 0x01=outdated
         
         $realTimeStatus = ($state -band 0x00FF00) >> 8  # Extract middle byte
         
         # Check if real-time protection is active
-        # 0x01 = enabled, 0x00 = disabled, 0x10 = snoozed/expired
+        # 0x01 = enabled, 0x00 = disabled
         if ($realTimeStatus -eq 1) {
-            $avWarnings += "$avName is running (state: $state)"
-        }
-    }
-}
-
-# Also check Windows Defender service status (more reliable)
-$defenderService = Get-Service -Name 'WinDefend' -ErrorAction SilentlyContinue
-if ($defenderService -and $defenderService.Status -eq 'Running') {
-    # Check if real-time protection is enabled
-    $defender = Get-MpPreference -ErrorAction SilentlyContinue
-    if ($defender -and $defender.DisableRealtimeMonitoring -eq $false) {
-        if (-not ($avWarnings -match "Windows Defender")) {
-            $avWarnings += 'Windows Defender real-time protection is ON'
+            $avWarnings += "$avName is active (state: $state)"
         }
     }
 }
