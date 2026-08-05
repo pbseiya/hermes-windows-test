@@ -122,7 +122,9 @@ if (-not $gitCmd) {
     try {
         Invoke-WebRequest -Uri $gitUrl -OutFile $gitExe -UseBasicParsing
         Write-Info 'Extracting Git...'
-        Start-Process -FilePath $gitExe -ArgumentList ('-o"' + $gitDir + '"', '-y') -Wait -NoNewWindow
+        # Use proper argument format for 7z self-extracting archive
+        $extractArgs = "-o`"$gitDir`" -y"
+        Start-Process -FilePath $gitExe -ArgumentList $extractArgs -Wait -NoNewWindow
 
         # Add to PATH
         $gitBin = Join-Path $gitDir 'bin'
