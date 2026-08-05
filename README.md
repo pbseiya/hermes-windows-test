@@ -1,131 +1,137 @@
-# Hermes Agent Quick Install
+# Hermes Agent Windows Installation (Course 0)
 
-Install guide for Hermes Agent - Course 0
+**Repository:** `pbseiya/hermes-windows-test`
+**Creator:** Hermes Agent Training Team | **Updated:** 2026-07-24
+
+This repository provides automated installation scripts, guides, and course materials for setting up the Hermes Agent on Windows.
 
 ---
 
-## One-liner Commands
+## 📋 Prerequisites
 
-### Install
-Open **PowerShell** and run:
+**No admin rights are needed** (everything installs in the user folder). You will need the following before starting:
+
+| Requirement | How to Obtain |
+| :--- | :--- |
+| **LiteLLM API Key** | Provided by instructor (Course 0) |
+| **Telegram Bot Token** | Create via `@BotFather` in Telegram (Slide Module 02) |
+| **Telegram Chat ID** | Search `@userinfobot` in Telegram > press `/start` > copy the number |
+
+---
+
+## ⚙️ Installation & Uninstallation
+
+*   **Environment:** All installation commands must be run in **PowerShell**.
+*   **Uninstall Time:** Takes ~2-3 minutes (utilizes parallel fast deletion for all `node_modules`).
+
+### Viewing Long Logs
+
+If the installation/uninstallation log is too long to scroll:
+
+**Option 1: Increase Console Buffer**
 ```powershell
-irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
+$host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size 120,9999
 ```
 
-### Uninstall
+**Option 2: Save to File**
 ```powershell
-irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
-```
-Takes ~2-3 minutes (uses fast robocopy-based deletion for all node_modules)
-
----
-
-## What you need before installing
-
-| Item | How to get |
-|------|-----------|
-| **LiteLLM API Key** | From instructor (Course 0) |
-| **Telegram Bot Token** | Create from @BotFather in Telegram (see Slide Module 02) |
-| **Telegram Chat ID** | Search @userinfobot in Telegram > press /start > copy the number |
-
-> No admin rights needed - everything installs in user folder
-
----
-
-## Important: Antivirus
-
-**For full functionality (Dashboard + Desktop), temporarily disable antivirus during installation:**
-
-1. Open Windows Security > Virus & threat protection > Manage settings
-2. Turn off **Real-time protection**
-3. Run the install script
-4. Turn on Real-time protection after installation
-
-**If you don't disable antivirus:**
-- ✅ TUI + Telegram will work immediately
-- ❌ Dashboard + Desktop need manual fix (see Troubleshooting)
-
----
-
-## What the script installs automatically
-
-- Git Portable v2.47+
-- Node.js v22+ (portable)
-- Python 3.11+ (embeddable)
-- uv (Python package manager)
-- Hermes Agent v0.18+ (Dashboard, Desktop, TUI)
-- Antigravity CLI (agy) - for fixing hermes
-- Auto-start after login (Telegram Gateway + Dashboard)
-
----
-
-## After installation
-
-### Immediately available (no antivirus disable needed)
-```powershell
-hermes                          # Chat with Hermes (TUI)
-hermes doctor                   # Diagnose problems
-hermes model                    # Change model
+irm ... | iex | Tee-Object -FilePath install.log
 ```
 
-### Telegram Gateway
-- ✅ Auto-starts after installation
-- ✅ Auto-starts after reboot (~30 seconds after login)
-- Bot will respond to messages automatically
+### ⚠️ CRITICAL: Antivirus Warning
+**You must temporarily disable your antivirus during installation** to ensure full functionality of the Dashboard and Desktop features.
+*   *If you do not disable antivirus:* It will block `npm`, causing the Dashboard and Desktop components to fail.
 
-### Dashboard (requires antivirus disabled during install)
+---
+
+## 🚀 Post-Installation Features
+
+| Feature | Availability / Requirements |
+| :--- | :--- |
+| **Telegram Gateway** | Immediately available (No AV disable needed) |
+| **Dashboard** | Requires antivirus to be disabled during install |
+| **Desktop** | Requires antivirus to be disabled during install |
+
+---
+
+## 🔑 Change API Key After Installation
+
+If you skipped the API key prompts during installation or need to update your key:
+
+### Method 1: Interactive Wizard (Recommended)
 ```powershell
-hermes dashboard                # Opens http://localhost:9119
+hermes model
 ```
-- ✅ Auto-starts after reboot (~60 seconds after login)
+Follow the prompts to select provider and enter your API key.
 
-### Desktop (requires antivirus disabled during install)
+### Method 2: Direct Command
 ```powershell
-hermes desktop                  # Opens Electron desktop app
+hermes config set model.api_key "your-api-key-here"
+```
+
+### Method 3: Edit Config File
+```powershell
+notepad $env:LOCALAPPDATA\hermes\.env
+```
+Add or update: `LITELLM_API_KEY=your-key-here`
+
+### After Changing the Key
+```powershell
+hermes gateway restart
+hermes chat -q "สวัสดี"   # Test
 ```
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting Guide
 
-### Dashboard/Desktop not working (antivirus blocked npm)
-
-1. Temporarily disable antivirus real-time protection
-2. Open PowerShell and run:
+### Dashboard/Desktop not working
+Open PowerShell and run:
 ```powershell
 cd $env:LOCALAPPDATA\hermes\hermes-agent
-npm install --no-fund --no-audit
 npm run build -w web
 ```
-3. Re-enable antivirus
-4. Run `hermes dashboard` or `hermes desktop`
+Then run `hermes dashboard` or `hermes desktop` again
 
-### Telegram bot not responding
+### Telegram Bot Not Responding
+Check the Python process, restart the gateway, and review the logs:
+```powershell
+Get-Process -Name pythonw
+hermes gateway start
+type %LOCALAPPDATA%\hermes\logs\gateway.log
+```
 
-1. Check gateway is running: `Get-Process -Name pythonw`
-2. If not running: `hermes gateway start`
-3. Check logs: `type %LOCALAPPDATA%\hermes\logs\gateway.log`
+### Services Not Starting After Reboot
+Verify Task Scheduler tasks (primary auto-start method):
+```powershell
+schtasks /Query /TN "HermesGateway"
+schtasks /Query /TN "HermesDashboard"
+```
+If missing, start manually:
+```powershell
+schtasks /Run /TN "HermesGateway"
+schtasks /Run /TN "HermesDashboard"
+```
+**Fallback:** If Task Scheduler is restricted, check the Windows Startup folder:
+*   **Startup Path:** `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
 
-### After reboot - services not starting
-
-- Check Startup Folder: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
-- Should have: `HermesGateway.lnk`, `HermesDashboard.lnk`
+### `hermes` Command Not Recognized
+*Cause: PATH not loaded or incorrect path.*
+```powershell
+# Open a new PowerShell window
+# Or use the full path:
+& "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"
+```
 
 ---
 
-## Files in this Repository
+## 📂 Repository Files Reference
 
-| File | Description |
-|------|------------|
-| `quick-install.ps1` | Install script (one-liner) |
-| `quick-uninstall.ps1` | Uninstall script (one-liner) |
-| `quick-install.bat` | Batch file (double-click) |
-| `02-hermes-setup.html` | Slides (open in browser) |
-| `02-hermes-setup.md` | Slides (Markdown source) |
-| `INSTALLATION_GUIDE.md` | Full installation guide |
-| `TESTING_GUIDE.md` | Post-install testing guide |
-
----
-
-**Created by:** Hermes Agent Training Team
-**Updated:** 2026-07-14
+| File(s) | Description |
+| :--- | :--- |
+| `quick-install.ps1`, `quick-install.bat` | One-liner / double-click installation scripts |
+| `quick-uninstall.ps1` | One-liner uninstallation script |
+| `02-hermes-setup.md` | Course 02 setup slides (Markdown source) |
+| `INSTALLATION_GUIDE.md` | Comprehensive installation instructions |
+| `TESTING_GUIDE.md` | Post-installation testing procedures |
+| `ONE_LINE_COMMANDS.md` | Quick reference for one-liner commands |

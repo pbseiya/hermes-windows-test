@@ -1,344 +1,191 @@
-# 📚 Installation Guide - Course 0: Hermes + AI Harness
+# 📚 Installation Guide: Hermes Agent (Course 0)
 
-คู่มือการติดตั้ง Hermes Agent สำหรับผู้เรียน Course 0
-
-**เวอร์ชัน:** 1.1 (อัพเดทล่าสุด: 2026-07-11)
+**Version:** 2.0 | **Updated:** 2026-07-24 | **Platform:** Windows Only
+**Total Time:** 6-14 minutes | **Admin Rights:** Not Required
 
 ---
 
-## 🎯 ภาพรวม
+## 🎯 Overview
 
-สคริปต์ติดตั้งจะทำงาน **7 ขั้นตอน** ตามลำดับด้านล่าง ผู้เรียนไม่ต้องทำอะไรนอกจาก **รันสคริปต์ครั้งเดียว** และ **ตอบคำถาม** เมื่อถูกถาม
+The installation is a fully automated **11-step script**. It requires **no admin privileges** (installs entirely in user-space). Users only need to run the script once and answer prompts when asked.
 
+---
+
+## ⚙️ The 11-Step Installation Process
+
+| Step | Action | Details & Time |
+| :--- | :--- | :--- |
+| **1. Prerequisites** | Check environment | PowerShell 5.1+, Internet connection. *(30s)* |
+| **2. Install Git** | Portable Git v2.47.1+ | Downloads to `~/.local/git/` if missing. *(1-2 mins)* |
+| **3. Install Node.js** | v22.14.0+ portable | Downloads to `~/.local/node/` if missing. *(1-2 mins)* |
+| **4. Install Python** | 3.11.9 embeddable | Downloads to `~/.local/python/` if missing. *(1-2 mins)* |
+| **5. Install uv** | Python package manager | Installed via `irm https://astral.sh/uv/install.ps1 \| iex`. *(30s)* |
+| **6. Install Hermes Agent** | Main AI CLI + UI | Cloned to `%LOCALAPPDATA%\hermes\hermes-agent`, installed via `uv pip install -e '.[all]'`, npm dependencies built. *(2-4 mins)* |
+| **7. Install Antigravity CLI** | Repair tool | `agy` (Gemini CLI). Requires initial Google login. *(30s-1m)* |
+| **8. Prompt for Credentials** | Ask user for keys | **LiteLLM API Key**, **Telegram Bot Token**, **Telegram Chat ID**. *Can press Enter to skip.* *(2-5 mins)* |
+| **9. Write Configuration** | Auto-write config files | Creates `%LOCALAPPDATA%\hermes\.env` and `config.yaml`. Auto-backs up existing files. *(5s)* |
+| **10. Setup Auto-Start** | Configure boot services | Creates Windows Task Scheduler tasks: `HermesGateway` (30s delay), `HermesDashboard` (60s delay). Falls back to Startup Folder if Task Scheduler fails. *(2s)* |
+| **11. Start Gateway** | Launch Telegram Gateway | Gateway starts immediately after installation. *(2s)* |
+
+---
+
+## 🚀 Installation Commands
+
+### Method 1: PowerShell One-Liner (Recommended)
+```powershell
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Step 1: Prerequisites (Git, Node.js v22+, Python 3.11+)   │
-│  ↓                                                          │
-│  Step 2: Hermes Agent (npm install)                         │
-│  ↓                                                          │
-│  Step 2.5: Antigravity CLI (backup tool)                    │
-│  ↓                                                          │
-│  Step 3: ถาม API Keys (OpenRouter + Telegram)               │
-│  ↓                                                          │
-│  Step 4: ตั้งค่า .env + config.yaml                         │
-│  ↓                                                          │
-│  Step 5: Auto-start services                                │
-│  ↓                                                          │
-│  Step 6: ตรวจสอบ + สรุปผล                                   │
-└─────────────────────────────────────────────────────────────┘
+
+### Method 2: CMD (Alternative)
+```cmd
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex"
+```
+
+### Method 3: Double-Click
+1. Download `quick-install.bat` from the repository
+2. Double-click to run
+
+> **Fix for blocked scripts:** If you get an execution policy error, open PowerShell and run:
+> ```powershell
+> Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
+
+---
+
+## 📂 Installation Paths
+
+All tools are installed in user-space. The script automatically updates your `PATH`.
+
+| Component | Installation Path |
+|---|---|
+| **Git** | `%USERPROFILE%\.local\git\` |
+| **Node.js** | `%USERPROFILE%\.local\node\` |
+| **Python** | `%USERPROFILE%\.local\python\` |
+| **uv** | `%USERPROFILE%\.local\bin\` |
+| **Hermes Agent** | `%LOCALAPPDATA%\hermes\hermes-agent\` |
+| **Hermes CLI** | `%LOCALAPPDATA%\hermes\hermes-agent\venv\Scripts\hermes.exe` |
+| **Antigravity CLI** | `%LOCALAPPDATA%\agy\bin\` |
+| **Config Files** | `%LOCALAPPDATA%\hermes\.env`, `%LOCALAPPDATA%\hermes\config.yaml` |
+| **Logs** | `%LOCALAPPDATA%\hermes\logs\` |
+
+**After installation:** Open a **new PowerShell window** for PATH changes to take effect.
+
+---
+
+## ⚙️ Configuration Details
+
+The installer automatically writes to `%LOCALAPPDATA%\hermes\`:
+
+### `.env` File
+```env
+LITELLM_API_KEY=<your-key>
+TELEGRAM_BOT_TOKEN=<your-token>
+TELEGRAM_ALLOWED_USERS=<your-chat-id>
+HERMES_PYTHON=<path-to-venv-python>
+```
+
+### `config.yaml` File
+```yaml
+model:
+  provider: custom:litellm
+  default: qwen3.7-plus
+  base_url: https://litellm-proxy-gateway.pbseiyacpro7.workers.dev/v1
+  context_length: 1000000
+
+dashboard:
+  enabled: true
+  port: 9119
+
+approvals:
+  mode: off
+
+security:
+  redact_secrets: false
+
+privacy:
+  redact_pii: false
+
+telegram:
+  reactions: true
 ```
 
 ---
 
-## 📋 รายละเอียดแต่ละขั้นตอน
+## ✅ Post-Installation Checklist
 
-### Step 1: ติดตั้ง Prerequisites (User-Space)
-
-**ติดตั้งอะไร:**
-- **Git** - สำหรับจัดการโค้ดและดาวน์โหลดสคริปต์
-- **Node.js v22+** - รัน Hermes Agent (ใช้ nvm หรือ NodeSource)
-- **Python 3.11+** - สำหรับ tools และ scripts (ใช้ pyenv)
-- **pip** - จัดการ Python packages
-
-**ทำไมต้องติดตั้ง:**
-Hermes Agent ต้องการ Node.js และ Python เพื่อทำงาน
-
-**ตำแหน่งที่ติดตั้ง:**
-- Linux/macOS: `~/.nvm/`, `~/.pyenv/`, `~/.local/bin/`
-- Windows: `%USERPROFILE%\.nvm\`, `%USERPROFILE%\.local\python\`
-
-**ใช้เวลานานแค่ไหน:** 2-5 นาที (ขึ้นอยู่กับความเร็ว Internet)
-
-**หมายเหตุ:** ทุกโปรแกรมติดตั้งใน user-space ไม่ต้อง sudo/admin
+- [ ] `hermes --version` executes successfully
+- [ ] `hermes` opens the CLI and responds to "สวัสดี"
+- [ ] `hermes doctor` shows no errors
+- [ ] `hermes model` displays current provider
+- [ ] Dashboard is accessible at `http://localhost:9119`
+- [ ] `hermes desktop` opens the Electron app
+- [ ] Telegram bot replies (if token was provided)
+- [ ] `agy` runs and prompts for Google login
+- [ ] All commands work from any directory (PATH verified)
+- [ ] Gateway auto-starts after reboot
+- [ ] Dashboard auto-starts after reboot
 
 ---
 
-### Step 2: ติดตั้ง Hermes Agent (npm)
+## 🔑 Adding API Key After Installation
 
-**ติดตั้งอะไร:**
-- **Hermes Agent** - AI Agent CLI จาก Nous Research
+If you skipped the API key prompts during installation:
 
-**ทำไมต้องติดตั้ง:**
-เป็นโปรแกรมหลักที่เราจะใช้ใน Course 0
+### Method 1: Interactive Wizard (Recommended)
+```powershell
+hermes model
+```
+Follow the prompts to select provider and enter your API key.
 
-**ตำแหน่งที่ติดตั้ง:**
-- Linux/macOS: `~/.npm-global/bin/hermes`
-- Windows: `%USERPROFILE%\.npm-global\hermes.cmd`
+### Method 2: Direct Command
+```powershell
+hermes config set model.api_key "your-api-key-here"
+```
 
-**ใช้เวลานานแค่ไหน:** 1-3 นาที
+### Method 3: Edit Config File
+```powershell
+notepad $env:LOCALAPPDATA\hermes\.env
+```
+Add or update: `LITELLM_API_KEY=your-key-here`
 
-**หมายเหตุ:** ติดตั้งผ่าน npm ใน user-space ไม่ต้อง sudo
-
----
-
-### Step 2.5: ติดตั้ง Antigravity CLI (agy)
-
-**ติดตั้งอะไร:**
-- **Antigravity CLI (agy)** - Gemini CLI จาก Google (ฟรี)
-
-**ทำไมต้องติดตั้ง:**
-เป็นเครื่องมือสำรองสำหรับซ่อม Hermes เมื่อมีปัญหา
-
-**ตำแหน่งที่ติดตั้ง:**
-- Linux/macOS: `~/.local/bin/agy`
-- Windows: `%LOCALAPPDATA%\agy\bin\`
-
-**ใช้เวลานานแค่ไหน:** 30 วินาที - 1 นาที
-
-**หมายเหตุ:** 
-- ต้อง login ด้วย Google Account ครั้งแรก (ฟรี)
-- ไม่ต้องถาม password ตอนติดตั้ง
-- Free tier มี rate limit แต่เพียงพอสำหรับการซ่อม Hermes
-
----
-
-### Step 3: ถาม API Keys
-
-**ถามอะไร:**
-1. **OpenRouter API Key** - สำหรับใช้ AI models ฟรี
-2. **Telegram Bot Token** - สำหรับเชื่อมต่อ Telegram (ถ้าต้องการ)
-
-**ทำไมต้องถาม:**
-- OpenRouter ให้ใช้ Gemini, Claude, GPT ฟรี (มี rate limit)
-- Telegram Bot ให้คุยกับ Hermes ผ่าน Telegram
-
-**ต้องเตรียมอะไรก่อน:**
-- **OpenRouter**: สมัครที่ https://openrouter.ai/keys (ใช้ Google Account)
-- **Telegram**: สร้าง bot ที่ @BotFather บน Telegram
-
-**ใช้เวลานานแค่ไหน:** 2-5 นาที (รวมเวลาสมัคร)
-
-**หมายเหตุ:** สามารถกด Enter เพื่อข้ามได้ถ้ายังไม่มี
-
----
-
-### Step 4: ตั้งค่า .env + config.yaml
-
-**ตั้งค่าอะไร:**
-- **`~/.hermes/.env`** - เก็บ API keys
-  - `LITELLM_API_KEY` - LiteLLM Proxy (Course 0)
-  - `OPENROUTER_API_KEY` - OpenRouter Free Tier
-  - `TELEGRAM_BOT_TOKEN` - Telegram Bot Token
-- **`~/.hermes/config.yaml`** - ตั้งค่า Hermes
-  - Model: `qwen3.7-plus` ผ่าน LiteLLM Proxy
-  - Dashboard: `http://localhost:9119`
-  - Security: `approvals=off`, `redact_secrets=false`, `redact_pii=false`
-  - Telegram: `reactions=true`
-
-**ทำไมต้องตั้งค่า:**
-Hermes ต้องการ API keys และ configuration เพื่อทำงาน
-
-**ใช้เวลานานแค่ไหน:** 5 วินาที (อัตโนมัติ)
-
-**หมายเหตุ:** 
-- LiteLLM API key ถูกตั้งค่าให้แล้ว (ไม่ต้องสมัคร)
-- Backup ไฟล์เดิมอัตโนมัติก่อนเขียนทับ
-
----
-
-### Step 5: ตั้งค่า Auto-Start
-
-**ตั้งค่าอะไร:**
-- **Linux**: สร้าง systemd user services
-  - `hermes-gateway.service` - Telegram Gateway
-  - `hermes-dashboard.service` - Web Dashboard
-- **macOS**: สร้าง launchd plists
-- **Windows**: สร้าง Task Scheduler tasks
-
-**ทำไมต้องตั้งค่า:**
-ให้ Hermes เริ่มอัตโนมัติหลังรีสตาร์ทเครื่อง
-
-**ใช้เวลานานแค่ไหน:** 2 วินาที (อัตโนมัติ)
-
-**หมายเหตุ:** ไม่ต้อง sudo/admin rights
-
----
-
-### Step 6: ตรวจสอบ + สรุปผล
-
-**ตรวจสอบอะไร:**
-- ทดสอบ `hermes --version`
-- ตรวจสอบว่า hermes อยู่ใน PATH
-- แสดงตำแหน่งที่ติดตั้งทุกโปรแกรม
-
-**สรุปอะไร:**
-- แสดงคำสั่งเริ่มต้นใช้งาน
-- แสดงลิงก์ Dashboard: http://localhost:9119
-- แสดงวิธีทดสอบ Telegram Bot
-
-**ใช้เวลานานแค่ไหน:** 2 วินาที
+### After Adding the Key
+```powershell
+hermes gateway restart
+hermes chat -q "สวัสดี"   # Test
+```
 
 ---
 
 ## 🌐 PATH Configuration
 
-**ทุกโปรแกรมถูกเพิ่มใน PATH โดยอัตโนมัติ** เพื่อให้เรียกใช้ได้จากทุก folder
+All tools are added to the User PATH automatically. **You must open a new PowerShell window** for changes to take effect.
 
-### Linux / macOS
-
-เพิ่มใน shell config (`~/.bashrc` หรือ `~/.zshrc`):
-- `$HOME/.local/bin` — Git, agy
-- `$NVM_DIR` — Node.js (nvm)
-- `$PYENV_ROOT/bin` — Python (pyenv)
-- `$HOME/.npm-global/bin` — Hermes, npm global packages
-
-**หลังติดตั้งเสร็จ:**
-```bash
-source ~/.bashrc  # หรือ source ~/.zshrc
-```
-
-### Windows
-
-เพิ่มใน User Environment Variable:
-- `%USERPROFILE%\.local\git\bin` — Git
-- `%USERPROFILE%\.nvm` — Node.js (nvm)
-- `%USERPROFILE%\.local\node` — Node.js (portable)
-- `%USERPROFILE%\.local\python` — Python
-- `%USERPROFILE%\.npm-global` — Hermes, npm global packages
-- `%LOCALAPPDATA%\agy\bin` — Antigravity CLI
-
-**หลังติดตั้งเสร็จ:**
-เปิด PowerShell ใหม่เพื่อให้ PATH มีผล
+**Paths added:**
+- `%USERPROFILE%\.local\git\bin`
+- `%USERPROFILE%\.local\node`
+- `%USERPROFILE%\.local\python`
+- `%USERPROFILE%\.local\bin`
+- `%LOCALAPPDATA%\hermes\hermes-agent\venv\Scripts`
+- `%LOCALAPPDATA%\agy\bin`
 
 ---
 
-## 🚀 วิธีใช้งาน
+## 🐛 Troubleshooting Quick Reference
 
-### Windows (คอมพิวเตอร์บริษัท)
-
-**วิธีที่ง่ายที่สุด:**
-1. ดาวน์โหลดไฟล์จาก GitHub: https://github.com/pbseiya/hermes-windows-test
-2. แตกไฟล์
-3. ดับเบิลคลิก `install-windows.bat`
-4. ทำตามคำแนะนำบนหน้าจอ
-5. เมื่อถาม API key ให้ใส่ OpenRouter API key ของคุณ
-
-**ถ้ามีปัญหา:**
-- เปิด PowerShell แล้วรัน: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
-- ลองรัน `install-windows.bat` อีกครั้ง
+| Error / Issue | Cause & Solution |
+| :--- | :--- |
+| **`hermes: command not found`** | PATH not loaded. **Fix:** Open a new PowerShell window, or use full path: `& "$env:LOCALAPPDATA\hermes\hermes-agent\venv\Scripts\hermes.exe"` |
+| **`Execution Policy`** | PowerShell blocks scripts. **Fix:** `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+| **`agy: command not found`** | PATH not loaded or not logged in. **Fix:** Open new PowerShell, then run `agy` to login with Google. |
+| **Dashboard/Desktop not working** | Missing web build. **Fix:** Run `npm run build -w web` in `%LOCALAPPDATA%\hermes\hermes-agent` |
+| **Telegram bot not responding** | Gateway not running. **Fix:** `hermes gateway start` or `schtasks /Run /TN "HermesGateway"` |
+| **Services not starting after reboot** | Task Scheduler tasks missing. **Fix:** `schtasks /Run /TN "HermesGateway"` and `schtasks /Run /TN "HermesDashboard"` |
+| **Download fails** | Internet/Proxy issue. **Fix:** Check connection or configure corporate proxy. |
 
 ---
 
-### macOS
+## 📞 Support
 
-**วิธีติดตั้ง:**
-1. ดาวน์โหลดไฟล์จาก GitHub
-2. แตกไฟล์
-3. เปิด Terminal
-4. ไปที่โฟลเดอร์ที่แตกไฟล์: `cd ~/Downloads/hermes-windows-test-main`
-5. รันคำสั่ง: `chmod +x install-mac.sh`
-6. รันคำสั่ง: `./install-mac.sh`
-7. ทำตามคำแนะนำบนหน้าจอ
-
----
-
-### Linux
-
-**วิธีติดตั้ง:**
-1. ดาวน์โหลดไฟล์จาก GitHub
-2. แตกไฟล์
-3. เปิด Terminal
-4. ไปที่โฟลเดอร์ที่แตกไฟล์: `cd ~/Downloads/hermes-windows-test-main`
-5. รันคำสั่ง: `chmod +x install-linux.sh`
-6. รันคำสั่ง: `./install-linux.sh`
-7. ทำตามคำแนะนำบนหน้าจอ
-
----
-
-## 📊 สรุปเวลาติดตั้ง
-
-| ขั้นตอน | เวลา |
-|---------|------|
-| Step 1: Prerequisites | 2-5 นาที |
-| Step 2: Hermes Agent | 1-3 นาที |
-| Step 2.5: Antigravity CLI | 30 วินาที |
-| Step 3: ถาม API Keys | 2-5 นาที |
-| Step 4: ตั้งค่า | 5 วินาที |
-| Step 5: Auto-start | 2 วินาที |
-| Step 6: ตรวจสอบ | 2 วินาที |
-| **รวม** | **6-14 นาที** |
-
----
-
-## ✅ Checklist หลังติดตั้ง
-
-- [ ] รัน `hermes --version` ได้
-- [ ] รัน `hermes` เปิด CLI ได้
-- [ ] ส่งข้อความ "สวัสดี" ได้
-- [ ] เปิด Dashboard ที่ http://localhost:9119 ได้
-- [ ] Telegram bot ตอบกลับได้ (ถ้าใส่ token)
-- [ ] รัน `agy` ได้ (login ด้วย Google)
-- [ ] ทุกโปรแกรมเรียกใช้ได้จากทุก folder (PATH ถูกต้อง)
-
----
-
-## 🐛 ปัญหาที่พบบ่อย
-
-### 1. `hermes: command not found`
-
-**สาเหตุ:** PATH ไม่ได้ตั้ง
-
-**แก้ไข:**
-```bash
-# Linux/macOS
-source ~/.bashrc  # หรือ source ~/.zshrc
-
-# Windows
-# เปิด PowerShell ใหม่
-```
-
-### 2. `Permission denied` (Linux/macOS)
-
-**สาเหตุ:** สคริปต์ไม่มีสิทธิ์ execute
-
-**แก้ไข:**
-```bash
-chmod +x install-linux.sh  # หรือ install-mac.sh
-```
-
-### 3. `Execution Policy` (Windows)
-
-**สาเหตุ:** PowerShell บล็อกรันสคริปต์
-
-**แก้ไข:**
-```powershell
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### 4. Internet Connection
-
-**สาเหตุ:** ไม่สามารถดาวน์โหลด packages ได้
-
-**แก้ไข:**
-- ตรวจสอบการเชื่อมต่อ Internet
-- ถ้าใช้ corporate proxy อาจต้องตั้งค่า proxy
-
-### 5. `agy: command not found`
-
-**สาเหตุ:** PATH ไม่ได้ตั้ง หรือยังไม่ได้ login
-
-**แก้ไข:**
-```bash
-# Linux/macOS
-source ~/.bashrc
-
-# Windows
-# เปิด PowerShell ใหม่
-
-# Login ครั้งแรก
-agy
-```
-
----
-
-## 📞 ต้องการความช่วยเหลือ?
-
-ถ้ามีปัญหาในการติดตั้ง:
-1. อ่าน `TESTING_GUIDE.md` เพื่อตรวจสอบการติดตั้ง
-2. ส่ง screenshot ของ error มาให้ instructor
-
----
-
-**สร้างโดย:** Hermes Agent Training Team  
-**อัพเดทล่าสุด:** 2026-07-11  
-**เวอร์ชัน:** 1.1
+If issues persist:
+1. Read `TESTING_GUIDE.md` for detailed troubleshooting steps.
+2. Contact your instructor through the channel specified in Course 0.

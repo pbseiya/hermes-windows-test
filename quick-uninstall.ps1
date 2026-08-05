@@ -6,19 +6,53 @@
 
 $ErrorActionPreference = 'Continue'
 
+# Increase console buffer size for longer history
+try {
+    $buffer = $host.UI.RawUI.BufferSize
+    $buffer.Height = 9999
+    $host.UI.RawUI.BufferSize = $buffer
+} catch {
+    # Ignore if not supported (e.g., when piped)
+}
+
+# --- Timing helpers ---
+$script:StartTime = Get-Date
+$script:StepStartTime = Get-Date
+
 function Write-Ok   { param($msg) Write-Host "[OK] $msg" -ForegroundColor Green }
 function Write-Info  { param($msg) Write-Host "[INFO] $msg" -ForegroundColor Cyan }
 function Write-Warn  { param($msg) Write-Host "[!] $msg" -ForegroundColor Yellow }
-function Write-Step  { param($msg) Write-Host ("`n=== {0} ===" -f $msg) -ForegroundColor Magenta }
+function Write-Step  { 
+    param($msg) 
+    $elapsed = (Get-Date) - $script:StepStartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host ("`n=== {0} === [{1}]" -f $msg, $elapsedStr) -ForegroundColor Magenta
+    $script:StepStartTime = Get-Date
+}
+function Write-Elapsed {
+    $elapsed = (Get-Date) - $script:StartTime
+    $elapsedStr = '{0:mm\:ss}' -f $elapsed
+    Write-Host "[TIME] Total elapsed: $elapsedStr" -ForegroundColor DarkGray
+}
 
-# Helper: Fast directory removal using robocopy trick
+# Helper: Fast directory removal
 function Remove-Fast {
     param([string]$Path)
     if (-not (Test-Path $Path)) { return }
-    $emptyDir = Join-Path $env:TEMP 'empty_for_rmdir'
-    if (-not (Test-Path $emptyDir)) { New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null }
-    cmd /c "robocopy `"$emptyDir`" `"$Path`" /MIR /NFL /NDL /NJH /NJS /nc /ns /np 2>nul"
-    Remove-Item $Path -Force -ErrorAction SilentlyContinue
+    
+    # For node_modules with long paths, use robocopy trick
+    if ($Path -like '*node_modules*') {
+        $emptyDir = Join-Path $env:TEMP "empty_for_rmdir_$([guid]::NewGuid().ToString('N').Substring(0,8))"
+        if (-not (Test-Path $emptyDir)) { 
+            New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null 
+        }
+        # Use /PURGE instead of /MIR, redirect all output
+        cmd /c "robocopy `"$emptyDir`" `"$Path`" /PURGE /NFL /NDL /NJH /NJS /nc /ns /np /nfl /ndl" 2>&1 | Out-Null
+        Remove-Item $emptyDir -Force -ErrorAction SilentlyContinue
+    }
+    
+    # Remove the directory
+    Remove-Item $Path -Force -Recurse -ErrorAction SilentlyContinue
 }
 
 Write-Host ''
@@ -53,28 +87,12 @@ $startupDir = [System.Environment]::GetFolderPath('Startup')
 Get-ChildItem -Path $startupDir -Filter 'Hermes*' -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 Write-Ok 'Startup shortcuts removed'
 
-# --- Step 4: Remove hermes installation (fast: robocopy all node_modules) ---
+# --- Step 4: Remove hermes installation ---
 Write-Step 'Step 4: Remove hermes installation'
 
 $hermesDir = Join-Path $env:LOCALAPPDATA 'hermes'
 if (Test-Path $hermesDir) {
-    Write-Info 'Removing hermes (using fast delete)...'
-
-    # Fast-delete all node_modules directories (4 locations)
-    $nodeModulesPaths = @(
-        (Join-Path $hermesDir 'hermes-agent\node_modules'),
-        (Join-Path $hermesDir 'hermes-agent\web\node_modules'),
-        (Join-Path $hermesDir 'hermes-agent\apps\desktop\node_modules'),
-        (Join-Path $hermesDir 'hermes-agent\ui-tui\node_modules')
-    )
-    foreach ($nm in $nodeModulesPaths) {
-        if (Test-Path $nm) {
-            Write-Info "  Cleaning: $($nm.Replace($hermesDir, ''))"
-            Remove-Fast -Path $nm
-        }
-    }
-
-    # Now remove the entire hermes directory (much faster after node_modules cleared)
+    Write-Info 'Removing hermes directory...'
     Remove-Item $hermesDir -Recurse -Force -ErrorAction SilentlyContinue
     if (-not (Test-Path $hermesDir)) {
         Write-Ok 'Hermes removed'
@@ -85,7 +103,7 @@ if (Test-Path $hermesDir) {
     Write-Info 'Hermes not found -- skipping'
 }
 
-# --- Step 5: Remove portable tools (fast: robocopy) ---
+# --- Step 5: Remove portable tools ---
 Write-Step 'Step 5: Remove portable tools'
 
 $dirsToRemove = @(
@@ -98,7 +116,7 @@ $dirsToRemove = @(
 
 foreach ($dir in $dirsToRemove) {
     if (Test-Path $dir.Path) {
-        Remove-Fast -Path $dir.Path
+        Remove-Item $dir.Path -Recurse -Force -ErrorAction SilentlyContinue
         if (-not (Test-Path $dir.Path)) {
             Write-Ok "$($dir.Name) removed"
         } else {
@@ -158,6 +176,7 @@ Write-Host ''
 Write-Host '============================================================' -ForegroundColor Green
 Write-Host '                 Uninstall Complete!                        ' -ForegroundColor Green
 Write-Host '============================================================' -ForegroundColor Green
+Write-Elapsed
 Write-Host ''
 Write-Host 'Removed:' -ForegroundColor Cyan
 Write-Host '  - Hermes Agent + all data' -ForegroundColor White

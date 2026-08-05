@@ -49,6 +49,10 @@ Write-Host '============================================================' -Foreg
 Write-Host '   Hermes Agent Quick Install (User-Space -- No Admin)     ' -ForegroundColor Cyan
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host ''
+Write-Host '⚠️  IMPORTANT: Disable ALL antivirus real-time protection!' -ForegroundColor Yellow
+Write-Host '   - Trend Micro Apex One' -ForegroundColor Yellow
+Write-Host '   - Windows Defender (Set-MpPreference -DisableRealtimeMonitoring $true)' -ForegroundColor Yellow
+Write-Host ''
 
 # --- Detect Environment ---
 $isWSL = $false
@@ -118,7 +122,9 @@ if (-not $gitCmd) {
     try {
         Invoke-WebRequest -Uri $gitUrl -OutFile $gitExe -UseBasicParsing
         Write-Info 'Extracting Git...'
-        Start-Process -FilePath $gitExe -ArgumentList ('-o"' + $gitDir + '"', '-y') -Wait -NoNewWindow
+        # Use proper argument format for 7z self-extracting archive
+        $extractArgs = "-o`"$gitDir`" -y"
+        Start-Process -FilePath $gitExe -ArgumentList $extractArgs -Wait -NoNewWindow
 
         # Add to PATH
         $gitBin = Join-Path $gitDir 'bin'
@@ -161,7 +167,7 @@ if (-not $nodeCmd) {
     $nodeDir = Join-Path $env:USERPROFILE '.local\node'
     if (-not (Test-Path $nodeDir)) { New-Item -ItemType Directory -Path $nodeDir -Force | Out-Null }
 
-    $nodeUrl = 'https://nodejs.org/dist/v22.14.0/node-v22.14.0-win-x64.zip'
+    $nodeUrl = 'https://nodejs.org/dist/v22.22.0/node-v22.22.0-win-x64.zip'
     $nodeZip = Join-Path $nodeDir 'node.zip'
 
     Write-Info 'Downloading Node.js v22 portable (this may take 2-3 minutes)...'
@@ -221,6 +227,7 @@ else {
     Write-Err 'Node.js installation failed'
 }
 
+<<<<<<< HEAD
 # 1.6 Python 3.10+ (standalone or embeddable)
 
 # Refresh PATH again to get previously installed Python
@@ -495,10 +502,37 @@ if (-not $SkipInstall) {
     try {
         Push-Location $hermesInstallDir
         
-        # Create venv if not exists
+        # Install Python 3.11 via uv (matches official hermes installer)
+        # Check if Python 3.11 is already installed
+        Write-Info 'Checking Python 3.11...'
+        $pythonInstalled = $false
+        $pythonList = uv python list 2>&1
+        if ($pythonList -match '3\.11') {
+            Write-Ok 'Python 3.11 already installed'
+            $pythonInstalled = $true
+        }
+        
+        if (-not $pythonInstalled) {
+            Write-Info 'Installing Python 3.11 via uv...'
+            uv python install 3.11
+            if ($LASTEXITCODE -ne 0) {
+                Write-Err "Failed to install Python 3.11"
+                throw "Python installation failed"
+            }
+            Write-Ok 'Python 3.11 installed'
+        }
+        
+        # Create venv using python -m venv (avoids uv trampoline issue)
         $venvDir = Join-Path $hermesInstallDir 'venv'
         if (-not (Test-Path $venvDir)) {
-            uv venv venv --python 3.11
+            Write-Info 'Creating virtual environment with Python 3.11...'
+            $pythonPath = uv python find 3.11
+            & $pythonPath -m venv $venvDir
+            if ($LASTEXITCODE -ne 0) {
+                Write-Err "Failed to create virtual environment"
+                throw "venv creation failed"
+            }
+            Write-Ok 'Virtual environment created'
         }
         
         # Activate venv
@@ -506,12 +540,33 @@ if (-not $SkipInstall) {
         $venvPythonPath = Join-Path $venvScripts 'python.exe'
         $env:Path = $venvScripts + ';' + $env:Path
         
-        # Install hermes with all extras (Python)
-        # Use --link-mode=copy to avoid uv trampoline .exe files that antivirus blocks
+        # Tiered install (matches official hermes installer)
+        # Try full install first, fall back to smaller sets if rate-limited
         Write-Info 'Installing hermes-agent Python packages...'
-        $env:UV_LINK_MODE = 'copy'
-        uv pip install -e '.[all]' --link-mode=copy --quiet
-        Write-Ok 'Python packages installed'
+        $installSets = @('[all]', '[messaging,dashboard,ext]', '[messaging]', '')
+        $pipOk = $false
+        
+        foreach ($extra in $installSets) {
+            $package = if ($extra) { ".$extra" } else { "." }
+            Write-Info "  Trying pip install -e $package..."
+            & $venvPythonPath -m pip install -e $package --quiet
+            $exitCode = $LASTEXITCODE
+            
+            if ($exitCode -eq 0) {
+                $pipOk = $true
+                Write-Ok "Python packages installed ($package)"
+                break
+            } else {
+                Write-Warn "  Failed with exit code $exitCode"
+                if ($extra -ne '') {
+                    Write-Info "  Trying smaller package set..."
+                }
+            }
+        }
+        
+        if (-not $pipOk) {
+            Write-Warn 'Python packages install had issues -- hermes may not work'
+        }
 
         # Configure npm for corporate environments (antivirus-friendly)
         Write-Info 'Configuring npm for corporate environment...'
@@ -527,15 +582,16 @@ if (-not $SkipInstall) {
 
         # Helper: npm install with retry (handles antivirus file locking)
         function Invoke-NpmWithRetry {
-            param([string]$Command, [int]$MaxRetries = 3)
+            param([string]$Command, [int]$MaxRetries = 5)
             $nodeModules = Join-Path $hermesInstallDir 'node_modules'
             for ($attempt = 1; $attempt -le $MaxRetries; $attempt++) {
                 Write-Info "  Attempt $attempt of $MaxRetries..."
                 cmd /c "$Command 2>nul 1>nul"
                 if ($LASTEXITCODE -eq 0) { return $true }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in 10 seconds..."
-                    Start-Sleep -Seconds 10
+                    $delay = $attempt * 15
+                    Write-Warn "  npm failed (antivirus may be locking files) -- Retrying in $delay seconds..."
+                    Start-Sleep -Seconds $delay
                     # Clean corrupted node_modules before retry
                     if (Test-Path $nodeModules) {
                         Remove-Item $nodeModules -Recurse -Force -ErrorAction SilentlyContinue
@@ -546,13 +602,12 @@ if (-not $SkipInstall) {
             return $false
         }
 
-        # Use npm install with --ignore-scripts to bypass antivirus file locking
-        # Postinstall scripts (electron download, etc.) will be run separately
-        Write-Info 'Installing Node.js dependencies (antivirus-safe mode)...'
-        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit --ignore-scripts'
+        # Install Node.js dependencies without --ignore-scripts to ensure completeness
+        Write-Info 'Installing Node.js dependencies...'
+        $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd install --no-fund --no-audit'
         if (-not $npmOk) {
             Write-Warn 'npm install failed -- Falling back to npm ci...'
-            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit --ignore-scripts'
+            $npmOk = Invoke-NpmWithRetry -Command 'npm.cmd ci --no-fund --no-audit'
         }
         if ($npmOk) {
             Write-Ok 'Node.js dependencies installed'
@@ -593,6 +648,10 @@ if (-not $SkipInstall) {
             }
         }
         if ($webOk) {
+            # Ensure TypeScript is installed in root (required for tsc command)
+            Write-Info 'Installing TypeScript compiler...'
+            cmd /c "npm.cmd install --no-save typescript 2>nul 1>nul"
+            
             Write-Info 'Building web UI for dashboard (this may take 1-2 minutes)...'
             cmd /c "npm.cmd run build -w web 2>nul"
             if ($LASTEXITCODE -eq 0) {
