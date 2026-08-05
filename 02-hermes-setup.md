@@ -245,7 +245,9 @@ schtasks /Run /TN "HermesGateway"
 agy
 ```
 
-<p align="center"><img src="images/agy-cli.png" alt="Antigravity CLI" /></p>
+<div align="center">
+  <img src="images/agy-cli.png" alt="Antigravity CLI" />
+</div>
 
 **Features:**
 - Free Gemini 3.1 Pro access
