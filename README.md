@@ -12,7 +12,7 @@ This repository provides automated installation scripts, guides, and course mate
 
 ---
 
-## 📋 Prerequisites
+## ๐“ Prerequisites
 
 **No admin rights are needed** (everything installs in the user folder). You will need the following before starting:
 
@@ -24,27 +24,90 @@ This repository provides automated installation scripts, guides, and course mate
 
 ---
 
-## ⚙️ Installation & Uninstallation
+## โ๏ธ Installation & Uninstallation
 
 *   **Environment:** All installation commands must be run in **PowerShell**.
 *   **Uninstall Time:** Takes ~2-3 minutes (utilizes parallel fast deletion for all `node_modules`).
 
 ### Installation Methods
 
-**Method 1: PowerShell One-Liner (Recommended)**
+**Method 1: PowerShell One-Liner (Quick)**
 ```powershell
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
 ```
+*Suitable for: Personal machines, testing environments*
 
-**Method 2: Download then Run (Antivirus-friendly)**
+---
+
+**Method 2: Download then Run (Corporate-Recommended)**
 ```powershell
-# Step 1: Download script
-irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile "$env:TEMP\install.ps1"
+# Step 1: Download script to TEMP folder
+$f = "$env:TEMP\hermes-install.ps1"
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1' -OutFile $f -UseBasicParsing
 
-# Step 2: Run downloaded script
-powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1"
+# Step 2: Review script (optional, for audit)
+notepad $f
+
+# Step 3: Run with ExecutionPolicy bypass
+powershell -ExecutionPolicy Bypass -File $f
+
+# Step 4: Clean up
+Remove-Item $f
 ```
-Use Method 2 when `irm | iex` is blocked by execution policy or antivirus.
+*Suitable for: Corporate environments, audit compliance, antivirus restrictions*
+
+**Why Method 2 for Corporate:**
+- โ… Download first โ’ IT can review script before execution
+- โ… `-UseBasicParsing` โ’ Compatible with older PowerShell 5.1
+- โ… `-ExecutionPolicy Bypass` โ’ Avoids execution policy blocks
+- โ… Local file โ’ Antivirus less likely to block
+- โ… Audit trail โ’ Log shows which script version was run
+
+---
+
+**Method 3: Cache-Busting (If CDN returns old version)**
+```powershell
+$f = "$env:TEMP\hermes-install.ps1"
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1?t=20260806' -OutFile $f -UseBasicParsing
+powershell -ExecutionPolicy Bypass -File $f
+Remove-Item $f
+```
+*Use when: GitHub CDN caches old script version (add current date as timestamp)*
+
+---
+
+**Method 4: CMD (Command Prompt)**
+```cmd
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex"
+```
+*Suitable for: Users who prefer CMD over PowerShell*
+
+---
+
+### Uninstallation
+
+**Method 1: PowerShell One-Liner (Quick)**
+```powershell
+irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
+```
+
+**Method 2: Download then Run (Corporate-Recommended)**
+```powershell
+$f = "$env:TEMP\hermes-uninstall.ps1"
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1' -OutFile $f -UseBasicParsing
+powershell -ExecutionPolicy Bypass -File $f
+Remove-Item $f
+```
+
+**What Gets Removed:**
+- โ… Hermes Agent + all data
+- โ… Node.js, Git, Python (portable)
+- โ… uv, agy
+- โ… Scheduled tasks + startup shortcuts
+- โ… PATH entries
+- โ… npm cache
+
+**Note:** Config files in `%LOCALAPPDATA%\hermes\` are preserved (sessions, logs, .env, config.yaml). Delete manually if needed.
 
 ### Viewing Long Logs
 
@@ -60,7 +123,7 @@ $host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size 12
 irm ... | iex | Tee-Object -FilePath install.log
 ```
 
-### ⚠️ CRITICAL: Antivirus Warning
+### โ ๏ธ CRITICAL: Antivirus Warning
 **You must temporarily disable your antivirus during installation** to ensure full functionality of the Dashboard and Desktop features.
 *   *If you do not disable antivirus:* It will block `npm`, causing the Dashboard and Desktop components to fail.
 
@@ -103,7 +166,7 @@ schtasks /Query /TN "HermesDashboard"
 
 ---
 
-## 🔑 Change API Key After Installation
+## ๐”‘ Change API Key After Installation
 
 If you skipped the API key prompts during installation or need to update your key:
 
@@ -127,12 +190,12 @@ Add or update: `LITELLM_API_KEY=your-key-here`
 ### After Changing the Key
 ```powershell
 hermes gateway restart
-hermes chat -q "สวัสดี"   # Test
+hermes chat -q "เธชเธงเธฑเธชเธ”เธต"   # Test
 ```
 
 ---
 
-## 🛠️ Troubleshooting Guide
+## ๐ ๏ธ Troubleshooting Guide
 
 ### Dashboard/Desktop not working
 Open PowerShell and run:
@@ -174,7 +237,7 @@ schtasks /Run /TN "HermesDashboard"
 
 ---
 
-## 📂 Repository Files Reference
+## ๐“ Repository Files Reference
 
 | File(s) | Description |
 | :--- | :--- |
