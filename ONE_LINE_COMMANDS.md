@@ -137,12 +137,16 @@ If you skipped the API key prompts during installation or need to update your ke
 hermes model
 ```
 
-### Method 2: Direct Command
+### Method 2: Direct Command (Recommended)
 ```powershell
-hermes config set model.api_key "your-api-key-here"
+# Set API key (saved to .env automatically)
+hermes config set LITELLM_API_KEY "sk-jCHHiVn5dx41A3MusmR4QQ"
+
+# Set model (saved to config.yaml automatically)
+hermes config set model litellm/qwen3.7-plus
 ```
 
-### Method 3: Edit .env File
+### Method 3: Edit .env File Directly
 ```powershell
 notepad $env:LOCALAPPDATA\hermes\.env
 ```
