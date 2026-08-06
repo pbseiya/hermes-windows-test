@@ -12,7 +12,7 @@ This repository provides automated installation scripts, guides, and course mate
 
 ---
 
-## ๐“ Prerequisites
+## 📋 Prerequisites
 
 **No admin rights are needed** (everything installs in the user folder). You will need the following before starting:
 
@@ -24,7 +24,7 @@ This repository provides automated installation scripts, guides, and course mate
 
 ---
 
-## โ๏ธ Installation & Uninstallation
+## ⚙️ Installation & Uninstallation
 
 *   **Environment:** All installation commands must be run in **PowerShell**.
 *   **Uninstall Time:** Takes ~2-3 minutes (utilizes parallel fast deletion for all `node_modules`).
@@ -57,11 +57,11 @@ Remove-Item $f
 *Suitable for: Corporate environments, audit compliance, antivirus restrictions*
 
 **Why Method 2 for Corporate:**
-- โ… Download first โ’ IT can review script before execution
-- โ… `-UseBasicParsing` โ’ Compatible with older PowerShell 5.1
-- โ… `-ExecutionPolicy Bypass` โ’ Avoids execution policy blocks
-- โ… Local file โ’ Antivirus less likely to block
-- โ… Audit trail โ’ Log shows which script version was run
+- ✅ Download first → IT can review script before execution
+- ✅ `-UseBasicParsing` → Compatible with older PowerShell 5.1
+- ✅ `-ExecutionPolicy Bypass` → Avoids execution policy blocks
+- ✅ Local file → Antivirus less likely to block
+- ✅ Audit trail → Log shows which script version was run
 
 ---
 
@@ -100,12 +100,12 @@ Remove-Item $f
 ```
 
 **What Gets Removed:**
-- โ… Hermes Agent + all data
-- โ… Node.js, Git, Python (portable)
-- โ… uv, agy
-- โ… Scheduled tasks + startup shortcuts
-- โ… PATH entries
-- โ… npm cache
+- ✅ Hermes Agent + all data
+- ✅ Node.js, Git, Python (portable)
+- ✅ uv, agy
+- ✅ Scheduled tasks + startup shortcuts
+- ✅ PATH entries
+- ✅ npm cache
 
 **Note:** Config files in `%LOCALAPPDATA%\hermes\` are preserved (sessions, logs, .env, config.yaml). Delete manually if needed.
 
@@ -123,7 +123,7 @@ $host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size 12
 irm ... | iex | Tee-Object -FilePath install.log
 ```
 
-### โ ๏ธ CRITICAL: Antivirus Warning
+### ⚠️ CRITICAL: Antivirus Warning
 **You must temporarily disable your antivirus during installation** to ensure full functionality of the Dashboard and Desktop features.
 *   *If you do not disable antivirus:* It will block `npm`, causing the Dashboard and Desktop components to fail.
 
@@ -166,7 +166,7 @@ schtasks /Query /TN "HermesDashboard"
 
 ---
 
-## ๐”‘ Change API Key After Installation
+## 🔑 Change API Key After Installation
 
 If you skipped the API key prompts during installation or need to update your key:
 
@@ -190,12 +190,12 @@ Add or update: `LITELLM_API_KEY=your-key-here`
 ### After Changing the Key
 ```powershell
 hermes gateway restart
-hermes chat -q "เธชเธงเธฑเธชเธ”เธต"   # Test
+hermes chat -q "สวัสดี"   # Test
 ```
 
 ---
 
-## ๐ ๏ธ Troubleshooting Guide
+## 🛠️ Troubleshooting Guide
 
 ### Dashboard/Desktop not working
 Open PowerShell and run:
@@ -237,7 +237,7 @@ schtasks /Run /TN "HermesDashboard"
 
 ---
 
-## ๐“ Repository Files Reference
+## 📂 Repository Files Reference
 
 | File(s) | Description |
 | :--- | :--- |
