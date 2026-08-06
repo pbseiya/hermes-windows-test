@@ -27,11 +27,11 @@ Remove-Item $f
 **Suitable for:** Corporate environments, audit compliance, antivirus restrictions
 
 **Why Method 2 for Corporate:**
-- โ… Download first โ’ IT can review script before execution
-- โ… `-UseBasicParsing` โ’ Compatible with older PowerShell 5.1
-- โ… `-ExecutionPolicy Bypass` โ’ Avoids execution policy blocks
-- โ… Local file โ’ Antivirus less likely to block
-- โ… Audit trail โ’ Log shows which script version was run
+- ✅ Download first → IT can review script before execution
+- ✅ `-UseBasicParsing` → Compatible with older PowerShell 5.1
+- ✅ `-ExecutionPolicy Bypass` → Avoids execution policy blocks
+- ✅ Local file → Antivirus less likely to block
+- ✅ Audit trail → Log shows which script version was run
 
 **Use this when:**
 - `irm | iex` is blocked by execution policy
@@ -62,17 +62,17 @@ powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.c
 
 ## What the Script Does
 
-1. โ… Check and install **Git** Portable v2.47.1+ (user-space, no admin)
-2. โ… Check and install **Node.js** v22.14.0+ (user-space, no admin)
-3. โ… Check and install **Python** 3.11.9+ (user-space, no admin)
-4. โ… Install **uv** (Python package manager)
-5. โ… Install **Hermes Agent** via uv + npm build (Dashboard, Desktop, TUI)
-6. โ… Install **Antigravity CLI (agy)** for Gemini free tier
-7. โ… Ask for **LiteLLM API Key**, **Telegram Bot Token**, and **Telegram Chat ID**
-8. โ… **Auto-query 20 models** from LiteLLM proxy after API key entry
-9. โ… Configure Hermes (`.env`, `config.yaml`) at `%LOCALAPPDATA%\hermes\` with all 20 models
-10. โ… Setup auto-start with **Windows Task Scheduler** (Gateway 30s, Dashboard 60s)
-11. โ… Start Telegram Gateway immediately
+1. ✅ Check and install **Git** Portable v2.47.1+ (user-space, no admin)
+2. ✅ Check and install **Node.js** v22.14.0+ (user-space, no admin)
+3. ✅ Check and install **Python** 3.11.9+ (user-space, no admin)
+4. ✅ Install **uv** (Python package manager)
+5. ✅ Install **Hermes Agent** via uv + npm build (Dashboard, Desktop, TUI)
+6. ✅ Install **Antigravity CLI (agy)** for Gemini free tier
+7. ✅ Ask for **LiteLLM API Key**, **Telegram Bot Token**, and **Telegram Chat ID**
+8. ✅ **Auto-query 20 models** from LiteLLM proxy after API key entry
+9. ✅ Configure Hermes (`.env`, `config.yaml`) at `%LOCALAPPDATA%\hermes\` with all 20 models
+10. ✅ Setup auto-start with **Windows Task Scheduler** (Gateway 30s, Dashboard 60s)
+11. ✅ Start Telegram Gateway immediately
 
 ---
 
@@ -128,7 +128,7 @@ anthropic/qwen3-coder-next, anthropic/qwen3-max-2026-01-23
 
 ---
 
-## ๐”‘ Change API Key After Installation
+## 🔑 Change API Key After Installation
 
 If you skipped the API key prompts during installation or need to update your key:
 
@@ -147,10 +147,10 @@ hermes config set model.api_key "your-api-key-here"
 notepad $env:LOCALAPPDATA\hermes\.env
 ```
 
-### โ ๏ธ Restart After Change
+### ⚠️ Restart After Change
 ```powershell
 hermes gateway restart
-hermes chat -q "เธชเธงเธฑเธชเธ”เธต"   # Test
+hermes chat -q "สวัสดี"   # Test
 ```
 
 ---
@@ -184,10 +184,10 @@ Remove-Item $f
 **Suitable for:** Corporate environments, audit compliance, antivirus restrictions
 
 **Why Method 1 for Corporate:**
-- โ… Download first โ’ IT can review script before execution
-- โ… `-UseBasicParsing` โ’ Compatible with older PowerShell 5.1
-- โ… `-ExecutionPolicy Bypass` โ’ Avoids execution policy blocks
-- โ… Local file โ’ Antivirus less likely to block
+- ✅ Download first → IT can review script before execution
+- ✅ `-UseBasicParsing` → Compatible with older PowerShell 5.1
+- ✅ `-ExecutionPolicy Bypass` → Avoids execution policy blocks
+- ✅ Local file → Antivirus less likely to block
 
 ---
 
@@ -203,12 +203,12 @@ irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uni
 **Uninstall Time:** ~2-3 minutes (uses parallel fast deletion for all `node_modules`)
 
 **What Gets Removed:**
-- โ… Hermes Agent + all data
-- โ… Node.js, Git, Python (portable)
-- โ… uv, agy
-- โ… Scheduled tasks + startup shortcuts
-- โ… PATH entries
-- โ… npm cache
+- ✅ Hermes Agent + all data
+- ✅ Node.js, Git, Python (portable)
+- ✅ uv, agy
+- ✅ Scheduled tasks + startup shortcuts
+- ✅ PATH entries
+- ✅ npm cache
 
 **Note:** Config files in `%LOCALAPPDATA%\hermes\` are preserved (sessions, logs, .env, config.yaml). Delete manually if needed.
 
