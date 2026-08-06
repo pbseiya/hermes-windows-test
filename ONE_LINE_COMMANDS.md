@@ -1,55 +1,78 @@
 # One-Line Install Commands
 
-## Method 1: PowerShell One-Liner (Recommended)
+## Method 1: PowerShell One-Liner (Quick)
 ```powershell
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex
 ```
+**Suitable for:** Personal machines, testing environments
 **Note:** Requires PowerShell execution policy to allow remote scripts. If blocked, use Method 2.
 
 ---
 
-## Method 2: Download then Run (Antivirus-friendly)
+## Method 2: Download then Run (Corporate-Recommended)
 ```powershell
-# Step 1: Download script
-irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile "$env:TEMP\install.ps1"
+# Step 1: Download script to TEMP folder
+$f = "$env:TEMP\hermes-install.ps1"
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1' -OutFile $f -UseBasicParsing
 
-# Step 2: Run downloaded script
-powershell -ExecutionPolicy Bypass -File "$env:TEMP\install.ps1"
+# Step 2: Review script (optional, for audit)
+notepad $f
+
+# Step 3: Run with ExecutionPolicy bypass
+powershell -ExecutionPolicy Bypass -File $f
+
+# Step 4: Clean up
+Remove-Item $f
 ```
+**Suitable for:** Corporate environments, audit compliance, antivirus restrictions
+
+**Why Method 2 for Corporate:**
+- โ… Download first โ’ IT can review script before execution
+- โ… `-UseBasicParsing` โ’ Compatible with older PowerShell 5.1
+- โ… `-ExecutionPolicy Bypass` โ’ Avoids execution policy blocks
+- โ… Local file โ’ Antivirus less likely to block
+- โ… Audit trail โ’ Log shows which script version was run
+
 **Use this when:**
 - `irm | iex` is blocked by execution policy
 - Antivirus blocks inline script execution
 - Corporate network restricts remote script execution
+- IT requires script review before execution
 
 ---
 
-## Method 3: CMD (Command Prompt)
+## Method 3: Cache-Busting (If CDN returns old version)
+```powershell
+$f = "$env:TEMP\hermes-install.ps1"
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1?t=20260806' -OutFile $f -UseBasicParsing
+powershell -ExecutionPolicy Bypass -File $f
+Remove-Item $f
+```
+**Use when:** GitHub CDN caches old script version (add current date as timestamp)
+
+---
+
+## Method 4: CMD (Command Prompt)
 ```cmd
 powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 | iex"
 ```
-
----
-
-## Method 4: Alternative One-Liner (Download + Run + Cleanup)
-```powershell
-$f="$env:TEMP\hermes-install.ps1"; irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-install.ps1 -OutFile $f; powershell -ExecutionPolicy Bypass -File $f; Remove-Item $f
-```
+**Suitable for:** Users who prefer CMD over PowerShell
 
 ---
 
 ## What the Script Does
 
-1. ✅ Check and install **Git** Portable v2.47.1+ (user-space, no admin)
-2. ✅ Check and install **Node.js** v22.14.0+ (user-space, no admin)
-3. ✅ Check and install **Python** 3.11.9+ (user-space, no admin)
-4. ✅ Install **uv** (Python package manager)
-5. ✅ Install **Hermes Agent** via uv + npm build (Dashboard, Desktop, TUI)
-6. ✅ Install **Antigravity CLI (agy)** for Gemini free tier
-7. ✅ Ask for **LiteLLM API Key**, **Telegram Bot Token**, and **Telegram Chat ID**
-8. ✅ **Auto-query 20 models** from LiteLLM proxy after API key entry
-9. ✅ Configure Hermes (`.env`, `config.yaml`) at `%LOCALAPPDATA%\hermes\` with all 20 models
-10. ✅ Setup auto-start with **Windows Task Scheduler** (Gateway 30s, Dashboard 60s)
-11. ✅ Start Telegram Gateway immediately
+1. โ… Check and install **Git** Portable v2.47.1+ (user-space, no admin)
+2. โ… Check and install **Node.js** v22.14.0+ (user-space, no admin)
+3. โ… Check and install **Python** 3.11.9+ (user-space, no admin)
+4. โ… Install **uv** (Python package manager)
+5. โ… Install **Hermes Agent** via uv + npm build (Dashboard, Desktop, TUI)
+6. โ… Install **Antigravity CLI (agy)** for Gemini free tier
+7. โ… Ask for **LiteLLM API Key**, **Telegram Bot Token**, and **Telegram Chat ID**
+8. โ… **Auto-query 20 models** from LiteLLM proxy after API key entry
+9. โ… Configure Hermes (`.env`, `config.yaml`) at `%LOCALAPPDATA%\hermes\` with all 20 models
+10. โ… Setup auto-start with **Windows Task Scheduler** (Gateway 30s, Dashboard 60s)
+11. โ… Start Telegram Gateway immediately
 
 ---
 
@@ -105,7 +128,7 @@ anthropic/qwen3-coder-next, anthropic/qwen3-max-2026-01-23
 
 ---
 
-## 🔑 Change API Key After Installation
+## ๐”‘ Change API Key After Installation
 
 If you skipped the API key prompts during installation or need to update your key:
 
@@ -124,10 +147,10 @@ hermes config set model.api_key "your-api-key-here"
 notepad $env:LOCALAPPDATA\hermes\.env
 ```
 
-### ⚠️ Restart After Change
+### โ ๏ธ Restart After Change
 ```powershell
 hermes gateway restart
-hermes chat -q "สวัสดี"   # Test
+hermes chat -q "เธชเธงเธฑเธชเธ”เธต"   # Test
 ```
 
 ---
@@ -146,11 +169,48 @@ After setup, use these commands in Telegram:
 
 ## Uninstall
 
+### Method 1: Download then Run (Corporate-Recommended)
+```powershell
+# Step 1: Download uninstall script
+$f = "$env:TEMP\hermes-uninstall.ps1"
+Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1' -OutFile $f -UseBasicParsing
+
+# Step 2: Run with ExecutionPolicy bypass
+powershell -ExecutionPolicy Bypass -File $f
+
+# Step 3: Clean up
+Remove-Item $f
+```
+**Suitable for:** Corporate environments, audit compliance, antivirus restrictions
+
+**Why Method 1 for Corporate:**
+- โ… Download first โ’ IT can review script before execution
+- โ… `-UseBasicParsing` โ’ Compatible with older PowerShell 5.1
+- โ… `-ExecutionPolicy Bypass` โ’ Avoids execution policy blocks
+- โ… Local file โ’ Antivirus less likely to block
+
+---
+
+### Method 2: PowerShell One-Liner (Quick)
 ```powershell
 irm https://raw.githubusercontent.com/pbseiya/hermes-windows-test/main/quick-uninstall.ps1 | iex
 ```
+**Suitable for:** Personal machines, testing environments
+**Note:** May be blocked by execution policy or antivirus in corporate environments.
 
-Takes ~2-3 minutes (uses parallel fast deletion for all `node_modules`)
+---
+
+**Uninstall Time:** ~2-3 minutes (uses parallel fast deletion for all `node_modules`)
+
+**What Gets Removed:**
+- โ… Hermes Agent + all data
+- โ… Node.js, Git, Python (portable)
+- โ… uv, agy
+- โ… Scheduled tasks + startup shortcuts
+- โ… PATH entries
+- โ… npm cache
+
+**Note:** Config files in `%LOCALAPPDATA%\hermes\` are preserved (sessions, logs, .env, config.yaml). Delete manually if needed.
 
 ### If Log is Too Long to Scroll
 
